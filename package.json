@@ -1,14 +1,14 @@
 {
-  "name": "ic-siwe-react-demo-rust",
+  "name": "multi_chain_voting",
   "version": "0.0.3",
   "description": "React demo application and template that demonstrates how to login Ethereum users into an IC canister using the Sign in with Ethereum (SIWE) standard.",
-  "author": "Kristofer Lund <kristofer@kristoferlund.se>",
+  "author": "Bjoern Assmann and Severin Siffert",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kristoferlund/ic-siwe-react-demo-rust"
+    "url": "https://github.com/https://github.com/bjoernek/multi_chain_voting"
   },
-  "bugs": "https://github.com/kristoferlund/ic-siwe-react-demo-rust/issues",
-  "homepage": "https://github.com/kristoferlund/ic-siwe-react-demo-rust",
+  "bugs": "https://github.com/bjoernek/multi_chain_voting",
+  "homepage": "https://github.com/bjoernek/multi_chain_voting",
   "keywords": [
     "dfinity",
     "ic",
@@ -33,9 +33,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@dfinity/agent": "^1.0.1",
-    "@dfinity/candid": "^1.0.1",
-    "@dfinity/identity": "^1.0.1",
+    "@dfinity/agent": "^1.1.1",
+    "@dfinity/candid": "^1.1.1",
+    "@dfinity/identity": "^1.1.1",
     "@dfinity/principal": "^1.0.1",
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
     "@fortawesome/free-brands-svg-icons": "^6.4.2",
@@ -50,8 +50,8 @@
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
     "tailwind-merge": "^2.0.0",
-    "viem": "^1.19.8",
-    "wagmi": "^1.4.7"
+    "viem": "^1.21.4",
+    "wagmi": "^1.4.13"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",
