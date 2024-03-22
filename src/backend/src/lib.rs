@@ -44,11 +44,56 @@ struct Proposal {
     no_votes: u64,
 }
 
+/// Call the `get_address` method on the siwe provider canister with the calling principal as an argument to get the
+/// address of the caller.
+async fn get_address() -> Result<String, String> {
+    // Get the siwe provider canister reference
+    let siwe_provider_canister = SIWE_PROVIDER_CANISTER
+        .with_borrow(|canister| canister.expect("Siwe provider canister not initialized"));
+
+    // Call the `get_address` method on the siwe provider canister with the calling principal as an argument
+    let response: Result<(GetAddressResponse,), _> = ic_cdk::call(
+        siwe_provider_canister,
+        "get_address",
+        (ic_cdk::caller().as_slice(),),
+    )
+    .await;
+
+    let address = match response {
+        Ok(inner_result) => {
+            // Handle the inner Result (GetAddressResponse)
+            match inner_result.0 {
+                Ok(address) => address,  // Successfully got the address
+                Err(e) => return Err(e), // Handle error in GetAddressResponse
+            }
+        }
+        Err(_) => return Err("Failed to get the caller address".to_string()), // Handle ic_cdk::call error
+    };
+
+    // Return the calling principal and address
+    Ok(address)
+}
+
 #[update]
-fn submit_proposal(title: String, description: String, proposal_type: String, eth_address: String) -> u64 {
+async fn submit_proposal(title: String, description: String, proposal_type: String) -> u64 {
     let submitter = caller().to_text();
-    let submitter_eth_address = eth_address;
+    // Initialize submitter_eth_address as an empty string or an appropriate default value
+    let mut submitter_eth_address: String = "".to_string();
     let timestamp = time();
+
+    // Attempt to get the address asynchronously
+    match get_address().await {
+        Ok(address) => {
+            println!("Address: {}", address);
+            // Store the address in submitter_eth_address if successful
+            submitter_eth_address = address;
+        },
+        Err(e) => {
+            println!("Error retrieving address: {}", e);
+            // Here you may choose to handle the error, like defaulting to a fallback address, or stopping execution
+            // For this example, we'll just log the error. You might want to return or handle differently in real code.
+        },
+    }
 
     PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
@@ -59,7 +104,7 @@ fn submit_proposal(title: String, description: String, proposal_type: String, et
             description,
             proposal_type,
             submitter,
-            submitter_eth_address,
+            submitter_eth_address, // This will be empty or contain the address from get_address()
             timestamp,
             yes_votes: 0, // No votes yet
             no_votes: 0,  // No votes yet
@@ -69,6 +114,7 @@ fn submit_proposal(title: String, description: String, proposal_type: String, et
         new_id // Returning the ID of the new proposal
     })
 }
+
 
 #[query]
 fn get_proposals() -> Vec<Proposal> {

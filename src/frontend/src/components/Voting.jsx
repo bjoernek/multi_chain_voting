@@ -26,7 +26,7 @@ export default function Voting() {
     }
     try {
       // Call the submit_proposal method on the actor
-      const proposalId = await actor.submit_proposal(title, description, type, address.toString());
+      const proposalId = await actor.submit_proposal(title, description, type );
       console.log(`Proposal submitted successfully with ID: ${proposalId}`);
 
       //Fetch updated list of proposals after submission
@@ -110,8 +110,8 @@ export default function Voting() {
                   <p>Id: {proposal.id.toString()}</p>
                   <p>Description: {proposal.description}</p>
                   <p>Type: {proposal.proposal_type}</p>
-                  <p>Submitter: {proposal.submitter}</p>
-                  <p>Submitter ETH Address: {proposal.submitter_eth_address}</p>
+                  <p>Submitter ICP principal: {proposal.submitter}</p>
+                  <p>Submitter ETH address: {proposal.submitter_eth_address}</p>
                   <p>Timestamp: {new Date(Number(proposal.timestamp) / 1_000_000).toLocaleString()}</p>
                   {/* Display vote tally */}
                   <p>Yes Votes: {proposal.yes_votes.toString()}</p>
