@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { backend } from '../../../declarations/backend';
-import './Voting.css';
 import { useActor } from "../ic/Actors";
 import { useAccount } from "wagmi";
 import Button from "./ui/Button";
@@ -67,31 +66,24 @@ export default function Voting() {
   };
 
 
-
   return (
-    <div className="app-container">
-      
-  
+    <div> 
         {/* New Proposal Submission Tile */}
         <div className="w-full max-w-2xl border-zinc-700/50 border-[1px] bg-zinc-900 px-5 py-5 drop-shadow-xl rounded-3xl flex flex-col items-center">
           <div className="text-center text-2xl font-bold py-8 md:px-8">
             Submit a proposal
           </div>
-          {/* <div className="header">
-            <h2>Submit a proposal</h2>
-          </div>
-        */}
-          <form onSubmit={handleProposalSubmit} className="form-container">
+
+          <form onSubmit={handleProposalSubmit} className="flex flex-col items-center w-full">
             <label>Title:</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="form-input" />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-3 w-full" />
             <label>Description:</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="form-input" />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="mt-3 w-full" />
             <label>Type:</label>
-            <select value={type} onChange={(e) => setType(e.target.value)} className="form-input">
+            <select value={type} onChange={(e) => setType(e.target.value)} className="mt-3 w-full" >
               <option value="Motion">Motion</option>
               <option value="TokenTransfer">Token Transfer</option>
             </select>
-            {/*<button type="submit">Submit Proposal</button>*/}
             <Button >
               {"Submit Proposal"}
             </Button>
@@ -105,7 +97,7 @@ export default function Voting() {
           <div className="flex flex-col items-center gap-5">
             {proposals.length > 0 ? (
               proposals.map((proposal, index) => (
-                <div key={index} className="proposal">
+                <div key={index} className="border border-gray-300 rounded-md p-4 mb-2.5 bg-gray-100 text-gray-700">
                   <h3>Title: {proposal.title}</h3>
                   <p>Id: {proposal.id.toString()}</p>
                   <p>Description: {proposal.description}</p>
@@ -117,17 +109,13 @@ export default function Voting() {
                   <p>Yes Votes: {proposal.yes_votes.toString()}</p>
                   <p>No Votes: {proposal.no_votes.toString()}</p>
                   {/* Buttons for voting */}
-                  <div className="flex items-center justify-center gap-5 text-sm md:text-base">
+                  <div className="flex items-center justify-center gap-5 text-sm md:text-base text-zinc-300">
                     <Button onClick={() => submitVote(proposal.id, true)} variant="dark">
                       {"Vote Yes"}
                     </Button>
                     <Button onClick={() => submitVote(proposal.id, false)} variant="dark">
                       {"Vote No"}
                     </Button>
-                    {/*
-              <button onClick={() => submitVote(proposal.id, true)}>Vote Yes</button>
-              <button onClick={() => submitVote(proposal.id, false)}>Vote No</button>
-              */}
                   </div>
                 </div>
               ))
