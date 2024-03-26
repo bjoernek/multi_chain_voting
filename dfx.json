@@ -8,13 +8,34 @@
     "backend": {
       "candid": "src/backend/backend.did",
       "package": "backend",
-      "type": "rust"
+      "type": "rust",
+      "dependencies": [
+        "evm_rpc"
+      ]
     },
     "frontend": {
-      "dependencies": ["backend", "ic_siwe_provider"],
-      "source": ["dist"],
+      "dependencies": [
+        "backend",
+        "ic_siwe_provider"
+      ],
+      "source": [
+        "dist"
+      ],
       "type": "assets",
-      "build": ["npm run build"]
+      "build": [
+        "npm run build"
+      ]
+    },
+    "evm_rpc": {
+      "type": "custom",
+      "candid": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did",
+      "wasm": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc_dev.wasm.gz",
+      "remote": {
+        "candid": "canisters/evm_rpc.did",
+        "id": {
+          "ic": "7hfb6-caaaa-aaaar-qadga-cai"
+        }
+      }
     }
   },
   "output_env_file": ".env",
