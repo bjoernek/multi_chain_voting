@@ -232,7 +232,7 @@ pub enum MultiGetTransactionReceiptResult {
 
 #[derive(Debug, CandidType, Deserialize)]
 pub enum SendRawTransactionStatus {
-  Ok,
+  Ok(Option<String>),
   NonceTooLow,
   NonceTooHigh,
   InsufficientFunds,
@@ -250,6 +250,7 @@ pub enum MultiSendRawTransactionResult {
   Inconsistent(Vec<(RpcService,SendRawTransactionResult,)>),
 }
 
+pub type ProviderId = u64;
 #[derive(Debug, CandidType, Deserialize)]
 pub struct Metrics {
   pub cyclesWithdrawn: candid::Nat,
@@ -363,7 +364,7 @@ impl EvmRpc {
   ) -> Result<(MultiSendRawTransactionResult,)> {
     ic_cdk::call(self.0, "eth_sendRawTransaction", (arg0,arg1,arg2,)).await
   }
-  pub async fn get_accumulated_cycle_count(&self, arg0: u64) -> Result<
+  pub async fn get_accumulated_cycle_count(&self, arg0: ProviderId) -> Result<
     (candid::Nat,)
   > { ic_cdk::call(self.0, "getAccumulatedCycleCount", (arg0,)).await }
   pub async fn get_authorized(&self, arg0: Auth) -> Result<(Vec<Principal>,)> {
@@ -409,7 +410,7 @@ impl EvmRpc {
   pub async fn set_open_rpc_access(&self, arg0: bool) -> Result<()> {
     ic_cdk::call(self.0, "setOpenRpcAccess", (arg0,)).await
   }
-  pub async fn unregister_provider(&self, arg0: u64) -> Result<(bool,)> {
+  pub async fn unregister_provider(&self, arg0: ProviderId) -> Result<(bool,)> {
     ic_cdk::call(self.0, "unregisterProvider", (arg0,)).await
   }
   pub async fn update_provider(&self, arg0: UpdateProviderArgs) -> Result<()> {
@@ -417,11 +418,11 @@ impl EvmRpc {
   }
   pub async fn withdraw_accumulated_cycles(
     &self,
-    arg0: u64,
+    arg0: ProviderId,
     arg1: Principal,
   ) -> Result<()> {
     ic_cdk::call(self.0, "withdrawAccumulatedCycles", (arg0,arg1,)).await
   }
 }
-pub const CANISTER_ID : Principal = Principal::from_slice(&[176, 158, 149, 62, 135, 109, 202, 192]); // yvu24-pnqt2-kt5b3-nzlaa
+pub const CANISTER_ID : Principal = Principal::from_slice(&[128, 0, 0, 0, 0, 16, 0, 2, 1, 1]); // bd3sg-teaaa-aaaaa-qaaba-cai
 pub const evm_rpc : EvmRpc = EvmRpc(CANISTER_ID);

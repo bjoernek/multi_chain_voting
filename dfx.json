@@ -10,7 +10,8 @@
       "package": "backend",
       "type": "rust",
       "dependencies": [
-        "evm_rpc"
+        "evm_rpc",
+        "ic_siwe_provider"
       ]
     },
     "frontend": {

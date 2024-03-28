@@ -15,6 +15,7 @@ use ic_cdk::api::{
 use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::PublicKey;
 use serde::{Deserialize, Serialize};
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -76,7 +77,7 @@ fn next_id() -> u64 {
         let mut next_id = next_id.borrow_mut();
         let id = *next_id;
         *next_id = next_id.wrapping_add(1);
-        id + 10_512425
+        id + 10_512427
     })
 }
 
@@ -223,16 +224,9 @@ pub async fn eth_transaction(
 
     match res {
         MultiSendRawTransactionResult::Consistent(SendRawTransactionResult::Ok(
-            SendRawTransactionStatus::Ok,
-        )) => "OK".into(),
+            SendRawTransactionStatus::Ok(txid),
+        )) => format!("Ok: {txid:?}"),
         other => format!("call: {signed_data}, error: {:?}", other),
-        // Ok((RequestResult::Ok(ok),)) => {
-        //     let json: JsonRpcResult =
-        //         serde_json::from_str(&ok).expect("JSON was not well-formatted");
-        //     let result = from_hex(&json.result.expect("Unexpected JSON response")).unwrap();
-        //     f.decode_output(&result).expect("Error decoding output")
-        // }
-        // err => panic!("Response error: {err:?}"),
     }
 }
 

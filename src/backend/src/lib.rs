@@ -16,7 +16,6 @@ use std::collections::HashMap;
 pub const TARGET_CONTRACT: &str = "0xcd76a64b5914aca2b59615a66af9073bb25b5008";
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
-type GetAddressResponse = Result<String, String>;
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
@@ -27,8 +26,6 @@ thread_local! {
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))),
         )
     );
-
-    static SIWE_PROVIDER_CANISTER: RefCell<Option<Principal>>  = RefCell::new(None);
 
     static VOTES: RefCell<HashMap<u64, HashMap<String, bool>>> = RefCell::new(HashMap::new());
     static PROPOSALS: RefCell<Vec<Proposal>> = RefCell::new(Vec::new());
@@ -47,36 +44,6 @@ struct Proposal {
     no_votes: u64,
 }
 
-/// Call the `get_address` method on the siwe provider canister with the calling principal as an argument to get the
-/// address of the caller.
-async fn get_address() -> Result<String, String> {
-    // Get the siwe provider canister reference
-    let siwe_provider_canister = SIWE_PROVIDER_CANISTER
-        .with_borrow(|canister| canister.expect("Siwe provider canister not initialized"));
-
-    // Call the `get_address` method on the siwe provider canister with the calling principal as an argument
-    let response: Result<(GetAddressResponse,), _> = ic_cdk::call(
-        siwe_provider_canister,
-        "get_address",
-        (ic_cdk::caller().as_slice(),),
-    )
-    .await;
-
-    let address = match response {
-        Ok(inner_result) => {
-            // Handle the inner Result (GetAddressResponse)
-            match inner_result.0 {
-                Ok(address) => address,  // Successfully got the address
-                Err(e) => return Err(e), // Handle error in GetAddressResponse
-            }
-        }
-        Err(_) => return Err("Failed to get the caller address".to_string()), // Handle ic_cdk::call error
-    };
-
-    // Return the calling principal and address
-    Ok(address)
-}
-
 #[update]
 async fn submit_proposal(title: String, description: String, proposal_type: String) -> u64 {
     let submitter = caller().to_text();
@@ -85,7 +52,7 @@ async fn submit_proposal(title: String, description: String, proposal_type: Stri
     let timestamp = time();
 
     // Attempt to get the address asynchronously
-    match get_address().await {
+    match service::save_my_profile::get_address().await {
         Ok(address) => {
             println!("Address: {}", address);
             // Store the address in submitter_eth_address if successful
