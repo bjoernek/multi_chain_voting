@@ -23,22 +23,22 @@ type ListProfilesResponse = variant {
 };
 
 type Proposal = record {
-  id: nat64;
-  title: text;
-  description: text;
-  proposal_type: text;
-  submitter: text;
-  submitter_eth_address: text;
-  timestamp: nat64;
-  yes_votes: nat64;
-  no_votes: nat64;
+  id : nat64;
+  title : text;
+  description : text;
+  proposal_type : text;
+  submitter : text;
+  submitter_eth_address : text;
+  timestamp : nat64;
+  yes_votes : nat64;
+  no_votes : nat64;
 };
 
-service : (siwe_provider_canister : text) -> {
+service : () -> {
   "get_my_profile" : () -> (GetMyProfileResponse) query;
   "save_my_profile" : (Name, AvatarUrl) -> (SaveMyProfileResponse);
   "list_profiles" : () -> (ListProfilesResponse) query;
-  "submit_proposal": (text, text, text) -> (nat64);
-  "get_proposals": () -> (vec Proposal) query;
-  "vote_on_proposal": (nat64, bool) -> ();
+  "submit_proposal" : (text, text, text) -> (nat64);
+  "get_proposals" : () -> (vec Proposal) query;
+  "vote_on_proposal" : (nat64, bool) -> ();
 };

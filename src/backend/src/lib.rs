@@ -1,3 +1,5 @@
+mod declarations;
+mod eth_rpc;
 mod service;
 mod user_profile;
 
@@ -8,12 +10,12 @@ use std::cell::RefCell;
 use user_profile::UserProfile;
 
 use ic_cdk::api::{caller, time};
-use ic_cdk_macros::*;
-use ic_cdk::println;
+use ic_cdk::{println, query, update};
 use std::collections::HashMap;
 
+pub const TARGET_CONTRACT: &str = "0xcd76a64b5914aca2b59615a66af9073bb25b5008";
+
 type Memory = VirtualMemory<DefaultMemoryImpl>;
-type GetAddressResponse = Result<String, String>;
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
@@ -24,8 +26,6 @@ thread_local! {
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))),
         )
     );
-
-    static SIWE_PROVIDER_CANISTER: RefCell<Option<Principal>>  = RefCell::new(None);
 
     static VOTES: RefCell<HashMap<u64, HashMap<String, bool>>> = RefCell::new(HashMap::new());
     static PROPOSALS: RefCell<Vec<Proposal>> = RefCell::new(Vec::new());
@@ -44,36 +44,6 @@ struct Proposal {
     no_votes: u64,
 }
 
-/// Call the `get_address` method on the siwe provider canister with the calling principal as an argument to get the
-/// address of the caller.
-async fn get_address() -> Result<String, String> {
-    // Get the siwe provider canister reference
-    let siwe_provider_canister = SIWE_PROVIDER_CANISTER
-        .with_borrow(|canister| canister.expect("Siwe provider canister not initialized"));
-
-    // Call the `get_address` method on the siwe provider canister with the calling principal as an argument
-    let response: Result<(GetAddressResponse,), _> = ic_cdk::call(
-        siwe_provider_canister,
-        "get_address",
-        (ic_cdk::caller().as_slice(),),
-    )
-    .await;
-
-    let address = match response {
-        Ok(inner_result) => {
-            // Handle the inner Result (GetAddressResponse)
-            match inner_result.0 {
-                Ok(address) => address,  // Successfully got the address
-                Err(e) => return Err(e), // Handle error in GetAddressResponse
-            }
-        }
-        Err(_) => return Err("Failed to get the caller address".to_string()), // Handle ic_cdk::call error
-    };
-
-    // Return the calling principal and address
-    Ok(address)
-}
-
 #[update]
 async fn submit_proposal(title: String, description: String, proposal_type: String) -> u64 {
     let submitter = caller().to_text();
@@ -82,17 +52,17 @@ async fn submit_proposal(title: String, description: String, proposal_type: Stri
     let timestamp = time();
 
     // Attempt to get the address asynchronously
-    match get_address().await {
+    match service::save_my_profile::get_address().await {
         Ok(address) => {
             println!("Address: {}", address);
             // Store the address in submitter_eth_address if successful
             submitter_eth_address = address;
-        },
+        }
         Err(e) => {
             println!("Error retrieving address: {}", e);
             // Here you may choose to handle the error, like defaulting to a fallback address, or stopping execution
             // For this example, we'll just log the error. You might want to return or handle differently in real code.
-        },
+        }
     }
 
     PROPOSALS.with(|proposals| {
@@ -115,24 +85,21 @@ async fn submit_proposal(title: String, description: String, proposal_type: Stri
     })
 }
 
-
 #[query]
 fn get_proposals() -> Vec<Proposal> {
-    PROPOSALS.with(|proposals_ref| {
-        proposals_ref.borrow().clone()
-    })
+    PROPOSALS.with(|proposals_ref| proposals_ref.borrow().clone())
 }
-
 
 #[update]
 fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
     let voter_principal = caller().to_text();
-    println!("Received vote: {}, from principal: {}, for proposal: {}", vote, voter_principal, proposal_id);
+    println!(
+        "Received vote: {}, from principal: {}, for proposal: {}",
+        vote, voter_principal, proposal_id
+    );
 
     // First, check if the proposal exists.
-    let exists = PROPOSALS.with(|proposals| {
-        proposals.borrow().iter().any(|p| p.id == proposal_id)
-    });
+    let exists = PROPOSALS.with(|proposals| proposals.borrow().iter().any(|p| p.id == proposal_id));
 
     if !exists {
         println!("Proposal not found for ID: {}", proposal_id);
@@ -145,12 +112,18 @@ fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         let proposal_votes = votes.entry(proposal_id).or_insert_with(HashMap::new);
 
         if proposal_votes.contains_key(&voter_principal) {
-            println!("Principal: {} has already voted on proposal: {}", voter_principal, proposal_id);
+            println!(
+                "Principal: {} has already voted on proposal: {}",
+                voter_principal, proposal_id
+            );
             true
         } else {
             // Record the new vote.
             proposal_votes.insert(voter_principal.clone(), vote);
-            println!("Vote: {} recorded for principal: {} on proposal: {}", vote, voter_principal, proposal_id);
+            println!(
+                "Vote: {} recorded for principal: {} on proposal: {}",
+                vote, voter_principal, proposal_id
+            );
             false
         }
     });
@@ -175,4 +148,3 @@ fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
 
     Ok(())
 }
-
