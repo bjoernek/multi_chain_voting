@@ -63,43 +63,46 @@ export default function Voting() {
 
 
   return (
-  
-      <div className="w-full max-w-4xl space-y-12">
-        {/* Proposal Submission Tile */}
-        <div className="w-full max-w-4xl mx-auto border border-gray-600 bg-zinc-900 px-8 py-8 drop-shadow-xl rounded-3xl flex flex-col items-center space-y-6">
-          <div className="text-center text-3xl font-bold text-white">
-            Submit a Proposal
-          </div>
 
-          <form onSubmit={handleProposalSubmit} className="flex flex-col items-center w-full space-y-4">
-            <div className="w-full">
-              <label className="block mb-2 text-lg text-gray-400">Title:</label>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white" />
-            </div>
-            <div className="w-full">
-              <label className="block mb-2 text-lg text-gray-400">Description:</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-3 h-32 rounded-lg border border-gray-600 bg-zinc-700 text-white" />
-            </div>
-            <div className="w-full">
-              <label className="block mb-2 text-lg text-gray-400">Type:</label>
-              <select value={type} onChange={(e) => setType(e.target.value)} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white">
-                <option value="Motion">Motion</option>
-                <option value="TokenTransfer">Token Transfer</option>
-              </select>
-            </div>
-            <Button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
-              Submit Proposal
-            </Button>
-          </form>
+    <div className="w-full max-w-4xl space-y-12">
+      {/* Proposal Submission Tile */}
+      <div className="w-full max-w-4xl mx-auto border border-gray-600 bg-zinc-900 px-8 py-8 drop-shadow-xl rounded-3xl flex flex-col items-center space-y-6">
+        <div className="text-center text-3xl font-bold text-white">
+          Submit a Proposal
         </div>
 
-        {/* List of current proposals*/}
-        <div className="w-full max-w-7xl mx-auto border border-gray-600 bg-zinc-900 px-5 py-5 drop-shadow-2xl rounded-3xl flex flex-col items-center space-y-8">
-          <div className="text-center text-3xl font-bold text-white">Vote on Current Proposals</div>
+        <form onSubmit={handleProposalSubmit} className="flex flex-col items-center w-full space-y-4">
+          <div className="w-full">
+            <label className="block mb-2 text-lg text-gray-400">Title:</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white" />
+          </div>
+          <div className="w-full">
+            <label className="block mb-2 text-lg text-gray-400">Description:</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-3 h-32 rounded-lg border border-gray-600 bg-zinc-700 text-white" />
+          </div>
+          <div className="w-full">
+            <label className="block mb-2 text-lg text-gray-400">Type:</label>
+            <select value={type} onChange={(e) => setType(e.target.value)} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white">
+              <option value="Motion">Motion</option>
+              <option value="TokenTransfer">Token Transfer</option>
+            </select>
+          </div>
+          <Button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+            Submit Proposal
+          </Button>
+        </form>
+      </div>
 
-          {proposals.length > 0 ? (
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {proposals.map((proposal, index) => (
+      {/* List of current proposals*/}
+      <div className="w-full max-w-7xl mx-auto border border-gray-600 bg-zinc-900 px-5 py-5 drop-shadow-2xl rounded-3xl flex flex-col items-center space-y-8">
+        <div className="text-center text-3xl font-bold text-white">Vote on Current Proposals</div>
+
+        {proposals.length > 0 ? (
+          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {proposals
+              .slice() // Create a shallow copy to avoid mutating the original array
+              .sort((a, b) => Number(b.timestamp - a.timestamp)) // sort proposals, showing most recent ones first
+              .map((proposal, index) => (
                 <div key={index} className="border border-gray-600 rounded-lg p-6 bg-zinc-800 text-gray-400 hover:bg-zinc-700 transition duration-300 ease-in-out space-y-4">
                   <h3 className="text-xl font-semibold text-white">{proposal.title}</h3>
                   <div className="text-gray-300">
@@ -134,15 +137,15 @@ export default function Voting() {
                 </div>
               ))}
 
-            </div>
-          ) : (
-            <p className="text-gray-400">No proposals found.</p>
-          )}
-          <Button onClick={fetchProposals} className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
-            Refresh Proposals
-          </Button>
-        </div>
-
+          </div>
+        ) : (
+          <p className="text-gray-400">No proposals found.</p>
+        )}
+        <Button onClick={fetchProposals} className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+          Refresh Proposals
+        </Button>
       </div>
+
+    </div>
   );
 }
