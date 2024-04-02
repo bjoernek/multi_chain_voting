@@ -30,8 +30,8 @@ type Proposal = record {
   submitter : text;
   submitter_eth_address : text;
   timestamp : nat64;
-  yes_votes : nat64;
-  no_votes : nat64;
+  yes_votes : nat;
+  no_votes : nat;
 };
 
 service : () -> {
