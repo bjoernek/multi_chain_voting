@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useActor } from "../ic/Actors";
 import Button from "./ui/Button";
 import { Proposal } from '../../../declarations/backend/backend.did';
@@ -11,6 +11,14 @@ export default function Voting() {
   const [description, setDescription] = useState('');
   const [type, setType] = useState('Motion');
   const [proposals, setProposals] = useState<Proposal[]>([]);
+
+  useEffect(() => {
+    if (actor) {
+      fetchProposals();
+    }
+  }, [actor]); // This assumes actor is stable and only initialized once; adjust based on your useActor hook
+
+
 
   const handleProposalSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
