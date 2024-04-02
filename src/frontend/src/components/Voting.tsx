@@ -14,7 +14,7 @@ export default function Voting() {
   const [type, setType] = useState('Motion');
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [votingProposals, setVotingProposals] = useState<bigint[]>([]);
 
   useEffect(() => {
     if (actor) {
@@ -61,8 +61,12 @@ export default function Voting() {
 
   const submitVote = async (proposalId: bigint, vote: boolean) => {
     console.log(`Attempting to vote on proposal ${proposalId} with vote: ${vote}`);
+    setVotingProposals(current => [...current, proposalId]); 
+
+
     if (!actor) {
       console.error("Actor is not initialized.");
+      setVotingProposals(current => current.filter(id => id !== proposalId));
       return;
     }
     try {
@@ -72,6 +76,7 @@ export default function Voting() {
     } catch (error) {
       console.error(`Failed to submit vote on proposal ${proposalId}:`, error);
     }
+    setVotingProposals(current => current.filter(id => id !== proposalId));
   };
 
 
@@ -124,7 +129,13 @@ export default function Voting() {
               .slice() // Create a shallow copy to avoid mutating the original array
               .sort((a, b) => Number(b.timestamp - a.timestamp)) // sort proposals, showing most recent ones first
               .map((proposal, index) => (
-                <div key={index} className="border border-gray-600 rounded-lg p-6 bg-zinc-800 text-gray-400 hover:bg-zinc-700 transition duration-300 ease-in-out space-y-4">
+                <div key={index} className="border border-gray-600 rounded-lg p-6 bg-zinc-800 text-gray-400 hover:bg-zinc-700 transition duration-300 ease-in-out space-y-4 relative">
+                   {votingProposals.includes(proposal.id) && (
+                    // This spinner is absolutely positioned within the relative container above
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-10">
+                      <Spinner />
+                    </div>
+                  )}
                   <h3 className="text-xl font-semibold text-white">{proposal.title}</h3>
                   <div className="text-gray-300">
                     <span className="font-semibold">Type:</span> <span className="ml-2">{proposal.proposal_type}</span>
@@ -143,10 +154,18 @@ export default function Voting() {
                   <p><span className="font-semibold text-gray-300">Blockheight:</span> {proposal.block_height.toString()}</p>
                   <div className="flex justify-between items-center text-sm text-gray-300">
                     <div className="flex gap-4">
-                      <button onClick={() => submitVote(proposal.id, true)} className="bg-green-400 hover:bg-green-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                      <button
+                        onClick={() => submitVote(proposal.id, true)}
+                        className="bg-green-400 hover:bg-green-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        disabled={votingProposals.includes(proposal.id)}
+                      >
                         Vote Yes
                       </button>
-                      <button onClick={() => submitVote(proposal.id, false)} className="bg-red-400 hover:bg-red-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                      <button
+                        onClick={() => submitVote(proposal.id, false)}
+                        className="bg-red-400 hover:bg-red-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        disabled={votingProposals.includes(proposal.id)}
+                      >
                         Vote No
                       </button>
                     </div>
