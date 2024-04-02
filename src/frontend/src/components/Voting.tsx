@@ -4,6 +4,8 @@ import Button from "./ui/Button";
 import { Proposal } from '../../../declarations/backend/backend.did';
 import AddressPill from "./AddressPill";
 import PrincipalPill from "./PrincipalPill";
+import Spinner from './Spinner';
+
 
 export default function Voting() {
   const { actor } = useActor();
@@ -11,6 +13,8 @@ export default function Voting() {
   const [description, setDescription] = useState('');
   const [type, setType] = useState('Motion');
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
 
   useEffect(() => {
     if (actor) {
@@ -26,6 +30,7 @@ export default function Voting() {
       console.error("Actor is not initialized.");
       return;
     }
+    setIsSubmitting(true); // Start the spinner
     try {
       const proposalId = await actor.submit_proposal(title, description, type);
       console.log(`Proposal submitted successfully with ID: ${proposalId}`);
@@ -34,7 +39,7 @@ export default function Voting() {
     } catch (error) {
       console.error("Failed to submit proposal:", error);
     }
-
+    setIsSubmitting(false); // Stop the spinner
     setTitle('');
     setDescription('');
     setType('Motion');
@@ -72,14 +77,21 @@ export default function Voting() {
 
   return (
 
-    <div className="w-full max-w-4xl space-y-12">
+    <div className="w-full max-w-4xl space-y-12 relative">
       {/* Proposal Submission Tile */}
       <div className="w-full max-w-4xl mx-auto border border-gray-600 bg-zinc-900 px-8 py-8 drop-shadow-xl rounded-3xl flex flex-col items-center space-y-6">
         <div className="text-center text-3xl font-bold text-white">
           Submit a Proposal
         </div>
 
-        <form onSubmit={handleProposalSubmit} className="flex flex-col items-center w-full space-y-4">
+        {/* Overlay Spinner */}
+        {isSubmitting && (
+          <div className="absolute top-0 left-0 w-full h-full flex justify-center items-center bg-black bg-opacity-50 rounded-3xl">
+            <Spinner />
+          </div>
+        )}
+
+        <form onSubmit={handleProposalSubmit} className={`flex flex-col items-center w-full space-y-4 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
           <div className="w-full">
             <label className="block mb-2 text-lg text-gray-400">Title:</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white" />
@@ -95,11 +107,12 @@ export default function Voting() {
               <option value="TokenTransfer">Token Transfer</option>
             </select>
           </div>
-          <Button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+          <Button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg" disabled={isSubmitting}>
             Submit Proposal
           </Button>
         </form>
       </div>
+
 
       {/* List of current proposals*/}
       <div className="w-full max-w-7xl mx-auto border border-gray-600 bg-zinc-900 px-5 py-5 drop-shadow-2xl rounded-3xl flex flex-col items-center space-y-8">
@@ -154,6 +167,6 @@ export default function Voting() {
         </Button>
       </div>
 
-    </div>
+    </div >
   );
 }
