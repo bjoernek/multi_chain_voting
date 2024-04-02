@@ -3,10 +3,14 @@ mod eth_rpc;
 mod service;
 mod user_profile;
 
-use candid::{CandidType, Deserialize, Principal};
+use crate::eth_rpc::balance_of;
+use candid::{CandidType, Deserialize, Nat};
+use eth_rpc::{eth_transaction, get_self_eth_address, latest_block_number};
+use ethers_core::abi::{Contract, Token};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::cell::RefCell;
+use std::rc::Rc;
 use user_profile::UserProfile;
 
 use ic_cdk::api::{caller, time};
@@ -14,6 +18,10 @@ use ic_cdk::{println, query, update};
 use std::collections::HashMap;
 
 pub const TARGET_CONTRACT: &str = "0xcd76a64b5914aca2b59615a66af9073bb25b5008";
+// Load relevant ABIs (Ethereum equivalent of Candid interfaces)
+thread_local! {
+    pub static ETH_CONTRACT: Rc<Contract> = Rc::new(include_abi!("../../../solidity/contract.json"));
+}
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 
@@ -40,8 +48,10 @@ struct Proposal {
     submitter: String,
     submitter_eth_address: String,
     timestamp: u64,
-    yes_votes: u64,
-    no_votes: u64,
+    accepting_votes: bool,
+    yes_votes: Nat,
+    no_votes: Nat,
+    block_height: String,
 }
 
 #[update]
@@ -65,6 +75,7 @@ async fn submit_proposal(title: String, description: String, proposal_type: Stri
         }
     }
 
+    let (_, block_height) = latest_block_number().await;
     PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
         let new_id = proposals.len() as u64 + 1; // Simple ID generation
@@ -76,8 +87,10 @@ async fn submit_proposal(title: String, description: String, proposal_type: Stri
             submitter,
             submitter_eth_address, // This will be empty or contain the address from get_address()
             timestamp,
-            yes_votes: 0, // No votes yet
-            no_votes: 0,  // No votes yet
+            accepting_votes: true,
+            yes_votes: 0_usize.into(), // No votes yet
+            no_votes: 0_usize.into(),  // No votes yet
+            block_height,
         };
 
         proposals.push(proposal);
@@ -91,7 +104,7 @@ fn get_proposals() -> Vec<Proposal> {
 }
 
 #[update]
-fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
+async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
     let voter_principal = caller().to_text();
     println!(
         "Received vote: {}, from principal: {}, for proposal: {}",
@@ -106,23 +119,43 @@ fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         return Err("Proposal not found".to_string());
     }
 
+    let block_number = PROPOSALS.with(|proposals| {
+        proposals
+            .borrow()
+            .get(proposal_id as usize)
+            .unwrap()
+            .block_height
+            .clone()
+    });
+
+    let voter = match service::save_my_profile::get_address().await {
+        Ok(address) => address,
+        Err(e) => {
+            ic_cdk::trap(&format!("Error retrieving address: {}", e));
+            // Here you may choose to handle the error, like defaulting to a fallback address, or stopping execution
+            // For this example, we'll just log the error. You might want to return or handle differently in real code.
+        }
+    };
+
+    let voting_power = balance_of(&voter, &block_number).await;
+
     // Then, record the vote, ensuring each principal votes only once per proposal.
     let already_voted = VOTES.with(|votes| {
         let mut votes = votes.borrow_mut();
         let proposal_votes = votes.entry(proposal_id).or_insert_with(HashMap::new);
 
-        if proposal_votes.contains_key(&voter_principal) {
+        if proposal_votes.contains_key(&voter) {
             println!(
-                "Principal: {} has already voted on proposal: {}",
-                voter_principal, proposal_id
+                "Voter {} has already voted on proposal: {}",
+                voter, proposal_id
             );
             true
         } else {
             // Record the new vote.
-            proposal_votes.insert(voter_principal.clone(), vote);
+            proposal_votes.insert(voter.clone(), vote);
             println!(
-                "Vote: {} recorded for principal: {} on proposal: {}",
-                vote, voter_principal, proposal_id
+                "Vote: {} recorded for voter {} on proposal: {}",
+                vote, voter, proposal_id
             );
             false
         }
@@ -137,14 +170,48 @@ fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         let mut proposals = proposals.borrow_mut();
         if let Some(proposal) = proposals.iter_mut().find(|p| p.id == proposal_id) {
             if vote {
-                proposal.yes_votes += 1;
-                println!("Incremented yes votes for proposal ID: {}", proposal_id);
+                println!(
+                    "Incremented yes votes by {} for proposal ID: {}",
+                    voting_power, proposal_id
+                );
+                proposal.yes_votes += voting_power;
             } else {
-                proposal.no_votes += 1;
-                println!("Incremented no votes for proposal ID: {}", proposal_id);
+                println!(
+                    "Incremented no votes by {} for proposal ID: {}",
+                    voting_power, proposal_id
+                );
+                proposal.no_votes += voting_power;
             }
         }
     });
 
     Ok(())
+}
+
+#[update]
+async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
+    PROPOSALS.with(|proposals| {
+        let mut proposals = proposals.borrow_mut();
+        let Some(proposal) = proposals.iter_mut().find(|p| p.id == proposal_id) else {
+            return Err(format!("Proposal {proposal_id} not found."));
+        };
+        if !proposal.accepting_votes {
+            return Err(format!("Proposal {proposal_id} already executed"));
+        }
+        proposal.accepting_votes = false;
+        Ok(())
+    })?;
+
+    Ok(eth_transaction(
+        TARGET_CONTRACT.into(),
+        &ETH_CONTRACT.with(Rc::clone),
+        "executeProposal",
+        &[Token::Uint(proposal_id.into())],
+    )
+    .await)
+}
+
+#[update]
+async fn get_eth_address() -> String {
+    get_self_eth_address().await
 }

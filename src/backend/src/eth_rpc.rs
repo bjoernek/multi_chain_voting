@@ -1,7 +1,8 @@
 use crate::declarations::evm_rpc::*;
-use candid::{Nat, Principal};
-use ethers_core::abi::ethereum_types::{Address, H160, U256, U64};
-use ethers_core::abi::{Contract, FunctionExt, Token, Uint};
+use crate::ETH_CONTRACT;
+use candid::Nat;
+use ethers_core::abi::ethereum_types::{Address, U256, U64};
+use ethers_core::abi::{Contract, FunctionExt, Token};
 use ethers_core::types::Bytes;
 use ethers_core::utils::keccak256;
 use hex::FromHexError;
@@ -15,7 +16,6 @@ use ic_cdk::api::{
 use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::PublicKey;
 use serde::{Deserialize, Serialize};
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -79,11 +79,6 @@ fn next_id() -> u64 {
         *next_id = next_id.wrapping_add(1);
         id + 10_512427
     })
-}
-
-// Load relevant ABIs (Ethereum equivalent of Candid interfaces)
-thread_local! {
-    static ETH_CONTRACT: Rc<Contract> = Rc::new(include_abi!("../../../solidity/contract.json"));
 }
 
 pub fn parse_address(address_str: &str) -> Result<Address, &'static str> {
@@ -346,10 +341,6 @@ fn nat_to_u64(n: &Nat) -> U64 {
     U64::from_big_endian(&be_bytes)
 }
 
-fn decode_hex(hex: &str) -> Bytes {
-    Bytes::from(hex::decode(hex.trim_start_matches("0x")).expect("failed to decode hex"))
-}
-
 pub async fn rpc_request_with_cycles(
     cycles: u64,
     arg1: String,
@@ -369,7 +360,7 @@ pub async fn rpc_request_with_cycles(
 }
 
 /// returns latest block number in `U256` and hex encoded form
-pub async fn block_number() -> (U256, String) {
+pub async fn latest_block_number() -> (U256, String) {
     let RequestResult::Ok(response) = rpc_request_with_cycles(
         1_000_000_000,
         "{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[]}".into(),
@@ -391,7 +382,7 @@ pub async fn block_number() -> (U256, String) {
     (U256::from_big_endian(&result), hex_result)
 }
 
-pub async fn balance_of(user: &str, block_number: &str) -> Uint {
+pub async fn balance_of(user: &str, block_number: &str) -> Nat {
     let Token::Uint(balance) = eth_call(
         super::TARGET_CONTRACT.into(),
         &ETH_CONTRACT.with(Rc::clone),
@@ -405,10 +396,11 @@ pub async fn balance_of(user: &str, block_number: &str) -> Uint {
     .clone() else {
         panic!("oops")
     };
-    balance
+    Nat::from_str(&balance.to_string()).unwrap()
 }
 
-pub async fn transfer_to(to: &str, amount: u128) -> String {
+#[allow(unused)]
+pub async fn erc20_transfer_to(to: &str, amount: u128) -> String {
     eth_transaction(
         super::TARGET_CONTRACT.into(),
         &ETH_CONTRACT.with(Rc::clone),

@@ -1,11 +1,11 @@
 create-canisters:
-	dfx canister create --all
+	dfx canister create --all --network ic
 
 deploy-provider:
-	dfx deploy ic_siwe_provider --argument "( \
+	dfx deploy ic_siwe_provider --with-cycles 1t --network ic --argument "( \
 	    record { \
-	        domain = \"127.0.0.1\"; \
-	        uri = \"http://127.0.0.1:5173\"; \
+	        domain = \"icp0.io\"; \
+	        uri = \"https://$$(dfx canister id --network ic ic_siwe_provider).icp0.io\"; \
 	        salt = \"salt\"; \
 	        chain_id = opt 1; \
 	        scheme = opt \"http\"; \
@@ -13,8 +13,8 @@ deploy-provider:
 	        sign_in_expires_in = opt 300000000000; /* 5 minutes */ \
 	        session_expires_in = opt 604800000000000; /* 1 week */ \
 	        targets = opt vec { \
-	            \"$$(dfx canister id ic_siwe_provider)\"; \
-	            \"$$(dfx canister id backend)\"; \
+	            \"$$(dfx canister id --network ic ic_siwe_provider)\"; \
+	            \"$$(dfx canister id --network ic backend)\"; \
 	        }; \
 	    } \
 	)"
@@ -22,8 +22,8 @@ deploy-provider:
 upgrade-provider:
 	dfx canister install ic_siwe_provider --mode upgrade --upgrade-unchanged --argument "( \
 	    record { \
-	        domain = \"127.0.0.1\"; \
-	        uri = \"http://127.0.0.1:5173\"; \
+	        domain = \"icp0.io\"; \
+	        uri = \"https://$$(dfx canister id --network ic ic_siwe_provider).icp0.io\"; \
 	        salt = \"salt\"; \
 	        chain_id = opt 1; \
 	        scheme = opt \"http\"; \
@@ -31,20 +31,20 @@ upgrade-provider:
 	        sign_in_expires_in = opt 300000000000; /* 5 minutes */ \
 	        session_expires_in = opt 604800000000000; /* 1 week */ \
 	        targets = opt vec { \
-	            \"$$(dfx canister id ic_siwe_provider)\"; \
-	            \"$$(dfx canister id backend)\"; \
+	            \"$$(dfx canister id --network ic ic_siwe_provider)\"; \
+	            \"$$(dfx canister id --network ic backend)\"; \
 	        }; \
 	    } \
 	)"
 
 deploy-backend:
-	dfx deploy backend --argument "$$(dfx canister id ic_siwe_provider)"
+	CANISTER_CANDID_PATH_EVM_RPC=../../src/evm_rpc.did dfx deploy backend --network ic
 
 deploy-frontend:
 	npm install
-	dfx deploy frontend
+	CANISTER_CANDID_PATH_EVM_RPC=../../src/evm_rpc.did dfx deploy frontend --network ic
 
-deploy-all: create-canisters deploy-provider deploy-backend deploy-frontend
+deploy-all: create-canisters deploy-provider deploy-backend deploy-frontend --with-cycles 1t
 
 run-frontend:
 	npm install
