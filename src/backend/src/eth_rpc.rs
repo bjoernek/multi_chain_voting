@@ -16,7 +16,6 @@ use ic_cdk::api::{
 use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::PublicKey;
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -69,16 +68,26 @@ pub fn ecdsa_key_id() -> EcdsaKeyId {
     }
 }
 
-fn next_id() -> u64 {
-    thread_local! {
-        static NEXT_ID: RefCell<u64> = RefCell::default();
+async fn next_id() -> Nat {
+    let res: CallResult<(MultiGetTransactionCountResult,)> = call_with_payment(
+        crate::declarations::evm_rpc::evm_rpc.0,
+        "eth_getTransactionCount",
+        (
+            RpcServices::EthSepolia(Some(vec![EthSepoliaService::BlockPi])),
+            None::<RpcConfig>,
+            GetTransactionCountArgs {
+                address: get_self_eth_address().await,
+                block: BlockTag::Latest,
+            },
+        ),
+        2_000_000_000,
+    )
+    .await;
+    match res {
+        Ok((MultiGetTransactionCountResult::Consistent(GetTransactionCountResult::Ok(id)),)) => id,
+        Ok((inconsistent,)) => ic_cdk::trap(&format!("Inconsistent: {inconsistent:?}")),
+        Err(err) => ic_cdk::trap(&format!("{:?}", err)),
     }
-    NEXT_ID.with(|next_id| {
-        let mut next_id = next_id.borrow_mut();
-        let id = *next_id;
-        *next_id = next_id.wrapping_add(1);
-        id + 10_512427
-    })
 }
 
 pub fn parse_address(address_str: &str) -> Result<Address, &'static str> {
@@ -127,7 +136,7 @@ pub async fn eth_call(
         .encode_input(args)
         .expect("Error while encoding input args");
     let json_rpc_payload = serde_json::to_string(&JsonRpcRequest {
-        id: next_id(),
+        id: next_id().await.0.try_into().unwrap(),
         jsonrpc: "2.0".to_string(),
         method: "eth_call".to_string(),
         params: (
@@ -195,7 +204,7 @@ pub async fn eth_transaction(
         max_fee_per_gas: MAX_FEE_PER_GAS.into(),
         max_priority_fee_per_gas: MAX_PRIORITY_FEE_PER_GAS.into(),
         value: 0_u8.into(),
-        nonce: next_id().into(),
+        nonce: next_id().await,
         data: Some(data.into()),
     })
     .await;

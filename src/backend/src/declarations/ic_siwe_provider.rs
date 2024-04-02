@@ -90,5 +90,5 @@ impl IcSiweProvider {
     (PrepareLoginResponse,)
   > { ic_cdk::call(self.0, "siwe_prepare_login", (arg0,)).await }
 }
-pub const CANISTER_ID : Principal = Principal::from_slice(&[0, 0, 0, 0, 1, 96, 71, 66, 1, 1]); // vis7i-yyaaa-aaaal-ai5ba-cai
+pub const CANISTER_ID : Principal = Principal::from_slice(&[128, 0, 0, 0, 0, 16, 0, 4, 1, 1]); // br5f7-7uaaa-aaaaa-qaaca-cai
 pub const ic_siwe_provider : IcSiweProvider = IcSiweProvider(CANISTER_ID);

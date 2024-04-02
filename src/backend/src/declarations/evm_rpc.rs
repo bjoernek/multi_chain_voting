@@ -424,5 +424,5 @@ impl EvmRpc {
     ic_cdk::call(self.0, "withdrawAccumulatedCycles", (arg0,arg1,)).await
   }
 }
-pub const CANISTER_ID : Principal = Principal::from_slice(&[0, 0, 0, 0, 2, 48, 0, 204, 1, 1]); // 7hfb6-caaaa-aaaar-qadga-cai
+pub const CANISTER_ID : Principal = Principal::from_slice(&[128, 0, 0, 0, 0, 16, 0, 2, 1, 1]); // bd3sg-teaaa-aaaaa-qaaba-cai
 pub const evm_rpc : EvmRpc = EvmRpc(CANISTER_ID);
