@@ -111,27 +111,18 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         vote, voter_principal, proposal_id
     );
 
-    // First, check if the proposal exists.
-    let exists = PROPOSALS.with(|proposals| proposals.borrow().iter().any(|p| p.id == proposal_id));
-
-    if !exists {
-        println!("Proposal not found for ID: {}", proposal_id);
-        return Err("Proposal not found".to_string());
-    }
-
+    // Attempt to find the proposal
     let block_number = PROPOSALS.with(|proposals| {
-        proposals.borrow().iter().find(|p| p.id == proposal_id).map_or_else(
-            || panic!("Proposal not found, this should not happen"),
-            |proposal| proposal.block_height.clone(),
+        proposals.borrow().iter().find(|&p| p.id == proposal_id).map_or_else(
+            || Err("Proposal not found".to_string()),
+            |proposal| Ok(proposal.block_height.clone()),
         )
-    });    
+    })?;
     
     let voter = match service::save_my_profile::get_address().await {
         Ok(address) => address,
         Err(e) => {
             ic_cdk::trap(&format!("Error retrieving address: {}", e));
-            // Here you may choose to handle the error, like defaulting to a fallback address, or stopping execution
-            // For this example, we'll just log the error. You might want to return or handle differently in real code.
         }
     };
 
