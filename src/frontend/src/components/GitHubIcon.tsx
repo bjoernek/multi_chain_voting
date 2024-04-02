@@ -5,7 +5,7 @@ export default function GitHubIcon() {
   return (
     <div className="flex flex-col items-center w-full max-w-2xl gap-5 text-center">
       <a
-        href="https://github.com/kristoferlund/ic-siwe-react-demo-rust"
+        href="https://github.com/bjoernek/multi_chain_voting"
         rel="noreferrer"
         target="_blank"
       >
