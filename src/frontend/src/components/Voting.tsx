@@ -116,7 +116,7 @@ export default function Voting() {
                   <AddressPill address={proposal.submitter_eth_address} className="bg-zinc-700" />
 
                   <p><span className="font-semibold text-gray-300">Timestamp:</span> {new Date(Number(proposal.timestamp) / 1_000_000).toLocaleString()}</p>
-
+                  <p><span className="font-semibold text-gray-300">Blockheight:</span> {proposal.block_height.toString()}</p>
                   <div className="flex justify-between items-center text-sm text-gray-300">
                     <div className="flex gap-4">
                       <button onClick={() => submitVote(proposal.id, true)} className="bg-green-400 hover:bg-green-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">

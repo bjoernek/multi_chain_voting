@@ -120,14 +120,12 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
     }
 
     let block_number = PROPOSALS.with(|proposals| {
-        proposals
-            .borrow()
-            .get(proposal_id as usize)
-            .unwrap()
-            .block_height
-            .clone()
-    });
-
+        proposals.borrow().iter().find(|p| p.id == proposal_id).map_or_else(
+            || panic!("Proposal not found, this should not happen"),
+            |proposal| proposal.block_height.clone(),
+        )
+    });    
+    
     let voter = match service::save_my_profile::get_address().await {
         Ok(address) => address,
         Err(e) => {
