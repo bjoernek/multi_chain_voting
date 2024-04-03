@@ -1,6 +1,5 @@
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
-import EditProfile from "../profile/EditProfile";
 import { Dialog as HeadlessDialog } from "@headlessui/react";
 import { useSiweIdentity } from "ic-use-siwe-identity";
 
@@ -46,10 +45,6 @@ export default function SessionDialog({
           })}
         </pre>
       </div>
-      <EditProfile
-        allwaysShow
-        className="w-full max-w-2xl border-zinc-700/50 border-[1px] bg-zinc-900 drop-shadow-xl rounded-3xl flex flex-col items-center p-8"
-      />
 
       <div className="flex justify-center w-full gap-5">
         <Button onClick={() => setIsOpen(false)} variant="outline">
