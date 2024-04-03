@@ -71,8 +71,6 @@ async fn submit_proposal(title: String, description: String, proposal_type: Stri
         }
         Err(e) => {
             println!("Error retrieving address: {}", e);
-            // Here you may choose to handle the error, like defaulting to a fallback address, or stopping execution
-            // For this example, we'll just log the error. You might want to return or handle differently in real code.
         }
     }
 
@@ -159,7 +157,7 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         return Err("You have already voted on this proposal".to_string());
     }
 
-    // Optionally, update the proposal's vote tally immediately.
+    // Update the proposal's vote tally 
     PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
         if let Some(proposal) = proposals.iter_mut().find(|p| p.id == proposal_id) {

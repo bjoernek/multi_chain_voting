@@ -11,7 +11,6 @@ function abbreviateNumber(value: number): string {
   const suffixes = ["", "K", "M", "B", "T", "P", "E", "Z", "Y"];
   const suffixIndex = Math.floor(Math.log10(value) / 3);
   let shortValue = (value / Math.pow(1000, suffixIndex)).toFixed(1);
-  
   // Remove any trailing .0
   shortValue = shortValue.replace(/\.0$/, '');
   
@@ -187,7 +186,7 @@ export default function Voting() {
                         Yes:
                         <span
                           className="ml-1 font-semibold"
-                          title={proposal.yes_votes.toString()}> {/* This title attribute */}
+                          title={proposal.yes_votes.toString()}> 
                           {abbreviateNumber(Number(proposal.yes_votes))}
                         </span>
                       </div>
@@ -195,7 +194,7 @@ export default function Voting() {
                         No:
                         <span
                           className="ml-1 font-semibold"
-                          title={proposal.no_votes.toString()}> {/* And this title attribute */}
+                          title={proposal.no_votes.toString()}> 
                           {abbreviateNumber(Number(proposal.no_votes))}
                         </span>
                       </div>
