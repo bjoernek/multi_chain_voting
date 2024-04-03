@@ -16,6 +16,7 @@ use ic_cdk::api::{
 use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::PublicKey;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -61,7 +62,7 @@ macro_rules! include_abi {
     }};
 }
 
-pub fn ecdsa_key_id() -> EcdsaKeyId {
+fn ecdsa_key_id() -> EcdsaKeyId {
     EcdsaKeyId {
         curve: ic_cdk::api::management_canister::ecdsa::EcdsaCurve::Secp256k1,
         name: ECDSA_KEY.with(|key| key.borrow().clone()),
@@ -238,12 +239,12 @@ fn to_hex(data: &[u8]) -> String {
     format!("0x{}", hex::encode(data))
 }
 
-pub fn from_hex(data: &str) -> Result<Vec<u8>, FromHexError> {
+fn from_hex(data: &str) -> Result<Vec<u8>, FromHexError> {
     hex::decode(&data[2..])
 }
 
 #[derive(Debug)]
-pub struct SignRequest {
+struct SignRequest {
     pub chain_id: Nat,
     pub to: String,
     pub gas: Nat,
@@ -256,7 +257,7 @@ pub struct SignRequest {
 }
 
 /// Computes a signature for an [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559) transaction.
-pub async fn sign_transaction(req: SignRequest) -> String {
+async fn sign_transaction(req: SignRequest) -> String {
     use ethers_core::types::transaction::eip1559::Eip1559TransactionRequest;
     use ethers_core::types::Signature;
 
@@ -422,23 +423,34 @@ pub async fn erc20_transfer_to(to: &str, amount: u128) -> String {
     .await
 }
 
+thread_local! {
+    static SELF_ETH_ADDRESS: RefCell<Option<String>> =
+        RefCell::new(None);
+}
+
 pub async fn get_self_eth_address() -> String {
-    let (pubkey,) = ecdsa_public_key(EcdsaPublicKeyArgument {
-        canister_id: None,
-        derivation_path: vec![],
-        key_id: ecdsa_key_id(),
-    })
-    .await
-    .unwrap();
+    if SELF_ETH_ADDRESS.with(|maybe_address| maybe_address.borrow().is_none()) {
+        let (pubkey,) = ecdsa_public_key(EcdsaPublicKeyArgument {
+            canister_id: None,
+            derivation_path: vec![],
+            key_id: ecdsa_key_id(),
+        })
+        .await
+        .unwrap();
 
-    let key = PublicKey::from_sec1_bytes(&pubkey.public_key)
-        .expect("failed to parse the public key as SEC1");
-    let point = key.to_encoded_point(false);
-    // we re-encode the key to the decompressed representation.
-    let point_bytes = point.as_bytes();
-    assert_eq!(point_bytes[0], 0x04);
+        let key = PublicKey::from_sec1_bytes(&pubkey.public_key)
+            .expect("failed to parse the public key as SEC1");
+        let point = key.to_encoded_point(false);
+        // we re-encode the key to the decompressed representation.
+        let point_bytes = point.as_bytes();
+        assert_eq!(point_bytes[0], 0x04);
 
-    let hash = keccak256(&point_bytes[1..]);
+        let hash = keccak256(&point_bytes[1..]);
 
-    ethers_core::utils::to_checksum(&Address::from_slice(&hash[12..32]), None)
+        let self_address =
+            ethers_core::utils::to_checksum(&Address::from_slice(&hash[12..32]), None);
+        SELF_ETH_ADDRESS.with(|maybe_address| *maybe_address.borrow_mut() = Some(self_address));
+    }
+
+    SELF_ETH_ADDRESS.with(|maybe_address| maybe_address.borrow().clone().unwrap())
 }
