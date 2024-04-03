@@ -6,6 +6,19 @@ import AddressPill from "./AddressPill";
 import PrincipalPill from "./PrincipalPill";
 import Spinner from './Spinner';
 
+function abbreviateNumber(value: number): string {
+  if (value < 1000) return value.toString();
+  const suffixes = ["", "K", "M", "B", "T", "P", "E", "Z", "Y"];
+  const suffixIndex = Math.floor(Math.log10(value) / 3);
+  let shortValue = (value / Math.pow(1000, suffixIndex)).toFixed(1);
+  
+  // Remove any trailing .0
+  shortValue = shortValue.replace(/\.0$/, '');
+  
+  return shortValue + suffixes[suffixIndex];
+}
+
+
 
 export default function Voting() {
   const { actor } = useActor();
@@ -20,7 +33,7 @@ export default function Voting() {
     if (actor) {
       fetchProposals();
     }
-  }, [actor]); // This assumes actor is stable and only initialized once; adjust based on your useActor hook
+  }, [actor]); 
 
 
 
@@ -61,7 +74,7 @@ export default function Voting() {
 
   const submitVote = async (proposalId: bigint, vote: boolean) => {
     console.log(`Attempting to vote on proposal ${proposalId} with vote: ${vote}`);
-    setVotingProposals(current => [...current, proposalId]); 
+    setVotingProposals(current => [...current, proposalId]);
 
 
     if (!actor) {
@@ -130,7 +143,7 @@ export default function Voting() {
               .sort((a, b) => Number(b.timestamp - a.timestamp)) // sort proposals, showing most recent ones first
               .map((proposal, index) => (
                 <div key={index} className="border border-gray-600 rounded-lg p-6 bg-zinc-800 text-gray-400 hover:bg-zinc-700 transition duration-300 ease-in-out space-y-4 relative">
-                   {votingProposals.includes(proposal.id) && (
+                  {votingProposals.includes(proposal.id) && (
                     // This spinner is absolutely positioned within the relative container above
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-10">
                       <Spinner />
@@ -169,10 +182,26 @@ export default function Voting() {
                         Vote No
                       </button>
                     </div>
-                    <div className="flex items-center ml-6"> {/* Added margin-left here */}
-                      <div className="mr-2">Yes: <span className="font-semibold">{proposal.yes_votes.toString()}</span></div>
-                      <div>No: <span className="font-semibold">{proposal.no_votes.toString()}</span></div>
+                    <div className="ml-6 flex flex-col">
+                      <div className="flex items-center mb-2">
+                        Yes:
+                        <span
+                          className="ml-1 font-semibold"
+                          title={proposal.yes_votes.toString()}> {/* This title attribute */}
+                          {abbreviateNumber(Number(proposal.yes_votes))}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        No:
+                        <span
+                          className="ml-1 font-semibold"
+                          title={proposal.no_votes.toString()}> {/* And this title attribute */}
+                          {abbreviateNumber(Number(proposal.no_votes))}
+                        </span>
+                      </div>
                     </div>
+
+
                   </div>
                 </div>
               ))}
