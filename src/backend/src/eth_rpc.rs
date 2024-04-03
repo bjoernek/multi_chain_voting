@@ -1,5 +1,5 @@
 use crate::declarations::evm_rpc::*;
-use crate::ETH_CONTRACT;
+use crate::{ECDSA_KEY, ETH_CONTRACT};
 use candid::Nat;
 use ethers_core::abi::ethereum_types::{Address, U256, U64};
 use ethers_core::abi::{Contract, FunctionExt, Token};
@@ -64,7 +64,7 @@ macro_rules! include_abi {
 pub fn ecdsa_key_id() -> EcdsaKeyId {
     EcdsaKeyId {
         curve: ic_cdk::api::management_canister::ecdsa::EcdsaCurve::Secp256k1,
-        name: String::from("test_key_1"),
+        name: ECDSA_KEY.with(|key| key.borrow().clone()),
     }
 }
 

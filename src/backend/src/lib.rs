@@ -14,7 +14,7 @@ use std::rc::Rc;
 use user_profile::UserProfile;
 
 use ic_cdk::api::{caller, time};
-use ic_cdk::{println, query, update};
+use ic_cdk::{init, post_upgrade, println, query, update};
 use std::collections::HashMap;
 
 pub const TARGET_CONTRACT: &str = "0xcd76a64b5914aca2b59615a66af9073bb25b5008";
@@ -37,6 +37,7 @@ thread_local! {
 
     static VOTES: RefCell<HashMap<u64, HashMap<String, bool>>> = RefCell::new(HashMap::new());
     static PROPOSALS: RefCell<Vec<Proposal>> = RefCell::new(Vec::new());
+    static ECDSA_KEY: RefCell<String> = RefCell::new(String::default());
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -113,12 +114,16 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
 
     // Attempt to find the proposal
     let block_number = PROPOSALS.with(|proposals| {
-        proposals.borrow().iter().find(|&p| p.id == proposal_id).map_or_else(
-            || Err("Proposal not found".to_string()),
-            |proposal| Ok(proposal.block_height.clone()),
-        )
+        proposals
+            .borrow()
+            .iter()
+            .find(|&p| p.id == proposal_id)
+            .map_or_else(
+                || Err("Proposal not found".to_string()),
+                |proposal| Ok(proposal.block_height.clone()),
+            )
     })?;
-    
+
     let voter = match service::save_my_profile::get_address().await {
         Ok(address) => address,
         Err(e) => {
@@ -203,4 +208,18 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
 #[update]
 async fn get_eth_address() -> String {
     get_self_eth_address().await
+}
+
+#[init]
+fn init(key_id: String) {
+    ECDSA_KEY.with(|key| {
+        *key.borrow_mut() = key_id;
+    });
+}
+
+#[post_upgrade]
+fn post_upgrade(key_id: String) {
+    ECDSA_KEY.with(|key| {
+        *key.borrow_mut() = key_id;
+    });
 }

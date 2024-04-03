@@ -36,7 +36,7 @@ type Proposal = record {
   block_height : text;
 };
 
-service : () -> {
+service : (text) -> {
   "get_my_profile" : () -> (GetMyProfileResponse) query;
   "save_my_profile" : (Name, AvatarUrl) -> (SaveMyProfileResponse);
   "list_profiles" : () -> (ListProfilesResponse) query;
