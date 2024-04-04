@@ -2,7 +2,7 @@ use crate::declarations::evm_rpc::*;
 use crate::{ECDSA_KEY, ETH_CONTRACT};
 use candid::Nat;
 use ethers_core::abi::ethereum_types::{Address, U256, U64};
-use ethers_core::abi::{Contract, FunctionExt, Token};
+use ethers_core::abi::{AbiDecode, Contract, FunctionExt, Token};
 use ethers_core::types::Bytes;
 use ethers_core::utils::keccak256;
 use hex::FromHexError;
@@ -21,8 +21,8 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 // const CHAIN_ID: u128 = 1337;
-const CHAIN_ID: u128 = 11155111;
-const GAS: u128 = 80_000;
+const CHAIN_ID: u128 = 11155111; // Sepolia
+const GAS: u128 = 300_000;
 const MAX_FEE_PER_GAS: u128 = 156_083_066_522_u128;
 const MAX_PRIORITY_FEE_PER_GAS: u128 = 3_000_000_000;
 
@@ -392,7 +392,25 @@ pub async fn latest_block_number() -> (U256, String) {
     (U256::from_big_endian(&result), hex_result)
 }
 
-pub async fn balance_of(user: &str, block_number: &str) -> Nat {
+pub async fn eth_balance_of(user: &str, block_number: &str) -> Nat {
+    let RequestResult::Ok(response) = rpc_request_with_cycles(1_000_000_000, format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"{user}\",\"{block_number}\"]}}"), 2000).await.expect("RPC failed").0 else {panic!("oops")};
+    let json: JsonRpcResult = serde_json::from_str(&response).expect("JSON was not well-formatted");
+    if let Some(err) = json.error {
+        panic!("JSON-RPC error code {}: {}", err.code, err.message);
+    }
+    let hex_result = json.result.expect("Unexpected JSON response");
+    let zeros_to_pad = 64 - hex_result.len() + 2;
+
+    Nat::from_str(
+        &U256::decode_hex(format!("{}{}", "0".repeat(zeros_to_pad), &hex_result[2..]))
+            .unwrap()
+            .to_string(),
+    )
+    .unwrap()
+}
+
+#[allow(unused)]
+pub async fn erc20_balance_of(user: &str, block_number: &str) -> Nat {
     let Token::Uint(balance) = eth_call(
         super::TARGET_CONTRACT.into(),
         &ETH_CONTRACT.with(Rc::clone),

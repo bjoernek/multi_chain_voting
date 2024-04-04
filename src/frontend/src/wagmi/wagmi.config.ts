@@ -1,4 +1,4 @@
-import { arbitrum, base, mainnet, optimism, polygon, zora } from "wagmi/chains";
+import { arbitrum, base, mainnet, optimism, polygon, zora, sepolia } from "wagmi/chains";
 import { configureChains, createConfig } from "wagmi";
 
 import { getDefaultWallets } from "@rainbow-me/rainbowkit";
@@ -11,6 +11,7 @@ export const supportedChains = [
   arbitrum,
   base,
   zora,
+  sepolia
 ];
 
 export const { chains, publicClient } = configureChains(supportedChains, [

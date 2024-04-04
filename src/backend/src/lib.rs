@@ -3,10 +3,11 @@ mod eth_rpc;
 mod service;
 mod user_profile;
 
-use crate::eth_rpc::balance_of;
+use crate::eth_rpc::eth_balance_of;
 use candid::{CandidType, Deserialize, Nat};
 use eth_rpc::{eth_transaction, get_self_eth_address, latest_block_number};
 use ethers_core::abi::{Contract, Token};
+use ic_cdk_macros::export_candid;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::cell::RefCell;
@@ -17,7 +18,7 @@ use ic_cdk::api::{caller, time};
 use ic_cdk::{init, post_upgrade, println, query, update};
 use std::collections::HashMap;
 
-pub const TARGET_CONTRACT: &str = "0xEF340D0e58F703f879e6375A7e666f4AA084CF2F";
+pub const TARGET_CONTRACT: &str = "0x2036081922cf3124E9f13b3a3a4bE55410C80D95";
 // Load relevant ABIs (Ethereum equivalent of Candid interfaces)
 thread_local! {
     pub static ETH_CONTRACT: Rc<Contract> = Rc::new(include_abi!("../../../solidity/contract.json"));
@@ -129,7 +130,7 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         }
     };
 
-    let voting_power = balance_of(&voter, &block_number).await;
+    let voting_power = eth_balance_of(&voter, &block_number).await;
 
     // Then, record the vote, ensuring each principal votes only once per proposal.
     let already_voted = VOTES.with(|votes| {
@@ -157,7 +158,7 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         return Err("You have already voted on this proposal".to_string());
     }
 
-    // Update the proposal's vote tally 
+    // Update the proposal's vote tally
     PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
         if let Some(proposal) = proposals.iter_mut().find(|p| p.id == proposal_id) {
@@ -182,7 +183,7 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
 
 #[update]
 async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
-    let (accepted, summary) = PROPOSALS.with(|proposals| {
+    let summary = PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
         let Some(proposal) = proposals.iter_mut().find(|p| p.id == proposal_id) else {
             return Err(format!("Proposal {proposal_id} not found."));
@@ -191,23 +192,21 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
             return Err(format!("Proposal {proposal_id} already executed"));
         }
         proposal.accepting_votes = false;
-        let accepted = proposal.yes_votes > proposal.no_votes;
         let summary = format!(
-            "Proposal '{}' concluded with {} yes votes and {} no votes",
-            proposal.title, proposal.yes_votes, proposal.no_votes
+            "{}: Prop {}: {}% yes",
+            ic_cdk::id(),
+            proposal.id,
+            ((proposal.yes_votes.clone() * 100_u128)
+                / (proposal.yes_votes.clone() + proposal.no_votes.clone()))
         );
-        Ok((accepted, summary))
+        Ok(summary)
     })?;
 
     Ok(eth_transaction(
         TARGET_CONTRACT.into(),
         &ETH_CONTRACT.with(Rc::clone),
-        "recordProposal",
-        &[
-            Token::Uint(proposal_id.into()),
-            Token::String(summary),
-            Token::Bool(accepted),
-        ],
+        "storeString",
+        &[Token::String(summary)],
     )
     .await)
 }
@@ -215,6 +214,13 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
 #[update]
 async fn get_eth_address() -> String {
     get_self_eth_address().await
+}
+
+#[update]
+async fn get_my_eth_balance() -> String {
+    eth_balance_of(&get_self_eth_address().await, "latest")
+        .await
+        .to_string()
 }
 
 #[init]
@@ -230,3 +236,5 @@ fn post_upgrade(key_id: String) {
         *key.borrow_mut() = key_id;
     });
 }
+
+export_candid!();

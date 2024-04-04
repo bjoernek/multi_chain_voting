@@ -24,7 +24,7 @@ deploy-provider:
 	        domain = \"icp0.io\"; \
 	        uri = \"https://$$(dfx canister id --network "${NETWORK}" frontend).icp0.io\"; \
 	        salt = \"salt\"; \
-	        chain_id = opt 1; \
+	        chain_id = opt 11155111; \
 	        scheme = opt \"http\"; \
 	        statement = opt \"Login to the SIWE/IC demo app\"; \
 	        sign_in_expires_in = opt 300000000000; /* 5 minutes */ \

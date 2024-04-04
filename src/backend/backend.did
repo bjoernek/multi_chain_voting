@@ -1,46 +1,29 @@
-type Name = text;
-type AvatarUrl = text;
-
-type UserProfile = record {
-  address : text;
-  name : text;
-  avatar_url : text;
-};
-
-type GetMyProfileResponse = variant {
-  Ok : UserProfile;
-  Err : text;
-};
-
-type SaveMyProfileResponse = variant {
-  Ok : UserProfile;
-  Err : text;
-};
-
-type ListProfilesResponse = variant {
-  Ok : vec record { text; UserProfile };
-  Err : text;
-};
-
 type Proposal = record {
   id : nat64;
   title : text;
-  description : text;
-  proposal_type : text;
-  submitter : text;
   submitter_eth_address : text;
-  timestamp : nat64;
-  accepting_votes : bool;
+  submitter : text;
   yes_votes : nat;
+  accepting_votes : bool;
+  description : text;
+  timestamp : nat64;
   no_votes : nat;
   block_height : text;
+  proposal_type : text;
 };
-
+type Result = variant { Ok : text; Err : text };
+type Result_1 = variant { Ok : UserProfile; Err : text };
+type Result_2 = variant { Ok : vec record { text; UserProfile }; Err : text };
+type Result_3 = variant { Ok; Err : text };
+type UserProfile = record { avatar_url : text; name : text; address : text };
 service : (text) -> {
-  "get_my_profile" : () -> (GetMyProfileResponse) query;
-  "save_my_profile" : (Name, AvatarUrl) -> (SaveMyProfileResponse);
-  "list_profiles" : () -> (ListProfilesResponse) query;
-  "submit_proposal" : (text, text, text) -> (nat64);
-  "get_proposals" : () -> (vec Proposal) query;
-  "vote_on_proposal" : (nat64, bool) -> ();
-};
+  execute_proposal : (nat64) -> (Result);
+  get_eth_address : () -> (text);
+  get_my_eth_balance : () -> (text);
+  get_my_profile : () -> (Result_1) query;
+  get_proposals : () -> (vec Proposal) query;
+  list_profiles : () -> (Result_2) query;
+  save_my_profile : (text, text) -> (Result_1);
+  submit_proposal : (text, text, text) -> (nat64);
+  vote_on_proposal : (nat64, bool) -> (Result_3);
+}
