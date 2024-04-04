@@ -65,6 +65,10 @@ contract AdminERC20Contract is IERC20 {
         _;
     }
 
+    function setExecutor(address _newExecutor) public onlyAdmin {
+        executor = _newExecutor;
+    }
+
     function addressExists(address a) internal view returns (bool) {
         for (uint256 i = 0; i < addresses.length; i++) {
             if (addresses[i] == a) {
@@ -161,34 +165,40 @@ contract AdminERC20Contract is IERC20 {
         return (addrs, bals);
     }
 
-    enum ProposalState {
-        Open,
-        Executed
-    }
-
     struct Proposal {
         string description;
-        ProposalState state;
+        bool accepted;
     }
 
     // Example storage for proposals
     mapping(uint256 => Proposal) public proposals;
+    uint256[] public proposalIds; // List of all recorded proposal IDs
 
-    // Counter for generating unique proposal IDs
-    uint256 private proposalCounter;
+    event ProposalAdded(
+        uint256 indexed proposalId,
+        string description,
+        bool accepted
+    );
 
-    // Function to create a new proposal
-    function createProposal(string memory _description) external {
-        uint256 newProposalId = proposalCounter++;
-        proposals[newProposalId] = Proposal(_description, ProposalState.Open);
+    function recordProposal(
+        uint256 _proposalId,
+        string memory _description,
+        bool _accepted
+    ) public onlyExecutor {
+        require(
+            bytes(proposals[_proposalId].description).length == 0,
+            "Proposal ID already exists"
+        );
+
+        Proposal storage newProposal = proposals[_proposalId];
+        newProposal.description = _description;
+        newProposal.accepted = _accepted;
+        emit ProposalAdded(_proposalId, _description, _accepted);
+
+        proposalIds.push(_proposalId);
     }
 
-    // Function to execute a proposal
-    function executeProposal(uint256 _proposalId) external onlyExecutor {
-        Proposal storage proposal = proposals[_proposalId];
-        require(proposal.state == ProposalState.Open, "Proposal is not open");
-
-        // Perform actions to execute the proposal (example: update state)
-        proposal.state = ProposalState.Executed;
+    function getProposalIds() external view returns (uint256[] memory) {
+        return proposalIds;
     }
 }

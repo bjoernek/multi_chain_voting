@@ -34,6 +34,31 @@
         "inputs": [
             {
                 "indexed": true,
+                "internalType": "uint256",
+                "name": "proposalId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "description",
+                "type": "string"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "accepted",
+                "type": "bool"
+            }
+        ],
+        "name": "ProposalAdded",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
                 "internalType": "address",
                 "name": "from",
                 "type": "address"
@@ -178,32 +203,6 @@
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "_description",
-                "type": "string"
-            }
-        ],
-        "name": "createProposal",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_proposalId",
-                "type": "uint256"
-            }
-        ],
-        "name": "executeProposal",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
         "inputs": [],
         "name": "executor",
         "outputs": [
@@ -248,6 +247,38 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "getProposalIds",
+        "outputs": [
+            {
+                "internalType": "uint256[]",
+                "name": "",
+                "type": "uint256[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "proposalIds",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "uint256",
@@ -263,12 +294,48 @@
                 "type": "string"
             },
             {
-                "internalType": "enum AdminERC20Contract.ProposalState",
-                "name": "state",
-                "type": "uint8"
+                "internalType": "bool",
+                "name": "accepted",
+                "type": "bool"
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_proposalId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "_description",
+                "type": "string"
+            },
+            {
+                "internalType": "bool",
+                "name": "_accepted",
+                "type": "bool"
+            }
+        ],
+        "name": "recordProposal",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_newExecutor",
+                "type": "address"
+            }
+        ],
+        "name": "setExecutor",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {

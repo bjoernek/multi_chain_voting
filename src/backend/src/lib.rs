@@ -17,7 +17,7 @@ use ic_cdk::api::{caller, time};
 use ic_cdk::{init, post_upgrade, println, query, update};
 use std::collections::HashMap;
 
-pub const TARGET_CONTRACT: &str = "0xcd76a64b5914aca2b59615a66af9073bb25b5008";
+pub const TARGET_CONTRACT: &str = "0xEF340D0e58F703f879e6375A7e666f4AA084CF2F";
 // Load relevant ABIs (Ethereum equivalent of Candid interfaces)
 thread_local! {
     pub static ETH_CONTRACT: Rc<Contract> = Rc::new(include_abi!("../../../solidity/contract.json"));
@@ -182,7 +182,7 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
 
 #[update]
 async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
-    PROPOSALS.with(|proposals| {
+    let (accepted, summary) = PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
         let Some(proposal) = proposals.iter_mut().find(|p| p.id == proposal_id) else {
             return Err(format!("Proposal {proposal_id} not found."));
@@ -191,14 +191,23 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
             return Err(format!("Proposal {proposal_id} already executed"));
         }
         proposal.accepting_votes = false;
-        Ok(())
+        let accepted = proposal.yes_votes > proposal.no_votes;
+        let summary = format!(
+            "Proposal '{}' concluded with {} yes votes and {} no votes",
+            proposal.title, proposal.yes_votes, proposal.no_votes
+        );
+        Ok((accepted, summary))
     })?;
 
     Ok(eth_transaction(
         TARGET_CONTRACT.into(),
         &ETH_CONTRACT.with(Rc::clone),
-        "executeProposal",
-        &[Token::Uint(proposal_id.into())],
+        "recordProposal",
+        &[
+            Token::Uint(proposal_id.into()),
+            Token::String(summary),
+            Token::Bool(accepted),
+        ],
     )
     .await)
 }
