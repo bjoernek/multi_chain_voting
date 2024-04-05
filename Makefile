@@ -21,7 +21,7 @@ deploy-provider:
 	)"
 	dfx deploy ic_siwe_provider --with-cycles 1t --network "${NETWORK}" --argument "( \
 	    record { \
-	        domain = \"icp0.io\"; \
+	        domain = \"https://$$(dfx canister id --network "${NETWORK}" frontend).icp0.io\"; \
 	        uri = \"https://$$(dfx canister id --network "${NETWORK}" frontend).icp0.io\"; \
 	        salt = \"salt\"; \
 	        chain_id = opt 11155111; \

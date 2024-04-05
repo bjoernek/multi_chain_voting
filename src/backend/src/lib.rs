@@ -193,7 +193,7 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
         }
         proposal.accepting_votes = false;
         let summary = format!(
-            "{}: Prop {}: {}% yes",
+            "{}: Proposal {}: {}% yes",
             ic_cdk::id(),
             proposal.id,
             ((proposal.yes_votes.clone() * 100_u128)
