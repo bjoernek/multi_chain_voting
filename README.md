@@ -26,6 +26,7 @@ This project is distributed under the MIT License, detailed in the LICENSE file.
 2. Install `dfx`
   - If on Windows: Install [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/basic-commands)
   - Run `sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"` and follow the printed instructions
+  - Run `dfxvm update`
 3. Deploy the voting app locally
   - Start a local ICP node: `dfx start --clean --background` (you can stop it later with `dfx stop`)
     - On Windows: If it doesn't work, deploy to mainnet instead (see below for instructions)
