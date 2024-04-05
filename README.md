@@ -19,6 +19,7 @@ The application leverages the [RPC canister](https://internetcomputer.org/docs/c
 This project is distributed under the MIT License, detailed in the LICENSE file.
 
 # Runbook
+0. Clone this repo and `cd` into it: `git clone git@github.com:bjoernek/multi_chain_voting.git && cd multi_chain_voting`
 1. Go to https://sepolia-faucet.pk910.de and start mining some SepoliaETH
 2. Install `dfx`
   - If on Windows: Install [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/basic-commands)
