@@ -13,6 +13,8 @@ This project implements an ERC-20 based, 100% on-chain voting system enabled by 
 * Triggering actions on Ethereum based on voting outcomes, illustrating a seamless, admin-free integration that ensures that governance decisions are directly reflected on the blockchain.
 
 ## Notes
+This is only a proof of concept and aims for simplicity of code, not security.
+
 The application leverages the [RPC canister](https://internetcomputer.org/docs/current/developer-docs/multi-chain/ethereum/using-eth/evm-rpc/) for ICP-Ethereum communication and incorporates Ethereum login functionality of the [Sign In with Ethereum (SIWE) project](https://github.com/kristoferlund/ic-siwe/tree/main/packages/ic_siwe_provider) and its [Rust demo](https://github.com/kristoferlund/ic-siwe-react-demo-rust).
 
 ## License
