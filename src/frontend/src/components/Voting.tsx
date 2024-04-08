@@ -111,7 +111,7 @@ export default function Voting() {
         {/* Overlay Spinner */}
         {isSubmitting && (
           <div className="absolute top-0 left-0 w-full h-full flex justify-center items-center bg-black bg-opacity-50 rounded-3xl">
-            <Spinner />
+            <Spinner item="block height" />
           </div>
         )}
 
@@ -122,7 +122,7 @@ export default function Voting() {
           </div>
           <div className="w-full">
             <label className="block mb-2 text-lg text-gray-400">Description:</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-3 h-32 rounded-lg border border-gray-600 bg-zinc-700 text-white" />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-3 h-40 rounded-lg border border-gray-600 bg-zinc-700 text-white" />
           </div>
           <div className="w-full">
             <label className="block mb-2 text-lg text-gray-400">Type:</label>
@@ -140,7 +140,7 @@ export default function Voting() {
 
       {/* List of current proposals*/}
       <div className="w-full max-w-7xl mx-auto border border-gray-600 bg-zinc-900 px-5 py-5 drop-shadow-2xl rounded-3xl flex flex-col items-center space-y-8">
-        <div className="text-center text-3xl font-bold text-white">Vote on Current Proposals</div>
+        <div className="text-center text-3xl font-bold text-white">Vote on Open Proposals</div>
 
         {proposals.length > 0 ? (
           <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
@@ -152,7 +152,7 @@ export default function Voting() {
                   {votingProposals.includes(proposal.id) && (
                     // This spinner is absolutely positioned within the relative container above
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-10">
-                      <Spinner />
+                      <Spinner item="voting power" />
                     </div>
                   )}
                   <h3 className="text-xl font-semibold text-white">{proposal.title}</h3>
