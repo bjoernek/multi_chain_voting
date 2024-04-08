@@ -12,7 +12,7 @@ function abbreviateNumber(value: number): string {
   const ethValue = value / 1e18;
 
   // Define suffixes
-  const suffixes = ["ETH", "K ETH", "M ETH", "B ETH", "T ETH"];
+  const suffixes = ["ETH", "K ETH", "M ETH", "B ETH"];
   // Calculate the suffix index
   const scale = Math.log10(ethValue) / 3;
   let suffixIndex = Math.floor(scale);
@@ -23,13 +23,8 @@ function abbreviateNumber(value: number): string {
   
   // Calculate the short value to display
   const shortValue = (ethValue / Math.pow(1000, suffixIndex)).toFixed(2);
-  // Remove any trailing .0
-  return shortValue.replace(/\.0$/, '') + suffixes[Math.min(suffixIndex, suffixes.length - 1)];
+  return shortValue + suffixes[Math.min(suffixIndex, suffixes.length - 1)];
 }
-
-
-
-
 
 export default function Voting() {
   const { actor } = useActor();
