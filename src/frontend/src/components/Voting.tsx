@@ -6,16 +6,28 @@ import AddressPill from "./AddressPill";
 import PrincipalPill from "./PrincipalPill";
 import Spinner from './Spinner';
 
+// Note: This only applies to ETH. For ERC20 tokens the number of decimals is configurable. 
 function abbreviateNumber(value: number): string {
-  if (value < 1000) return value.toString();
-  const suffixes = ["", "K", "M", "B", "T", "P", "E", "Z", "Y"];
-  const suffixIndex = Math.floor(Math.log10(value) / 3);
-  let shortValue = (value / Math.pow(1000, suffixIndex)).toFixed(1);
-  // Remove any trailing .0
-  shortValue = shortValue.replace(/\.0$/, '');
+  // Convert wei to ETH by dividing by 10^18
+  const ethValue = value / 1e18;
+
+  // Define suffixes
+  const suffixes = ["ETH", "K ETH", "M ETH", "B ETH", "T ETH"];
+  // Calculate the suffix index
+  const scale = Math.log10(ethValue) / 3;
+  let suffixIndex = Math.floor(scale);
+  if (suffixIndex < 0) {
+    // Handle cases where ethValue is less than 1 
+    return ethValue.toFixed(2) + " ETH";
+  }
   
-  return shortValue + suffixes[suffixIndex];
+  // Calculate the short value to display
+  const shortValue = (ethValue / Math.pow(1000, suffixIndex)).toFixed(2);
+  // Remove any trailing .0
+  return shortValue.replace(/\.0$/, '') + suffixes[Math.min(suffixIndex, suffixes.length - 1)];
 }
+
+
 
 
 
@@ -136,7 +148,7 @@ export default function Voting() {
         <div className="text-center text-3xl font-bold text-white">Vote on Current Proposals</div>
 
         {proposals.length > 0 ? (
-          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
             {proposals
               .slice() // Create a shallow copy to avoid mutating the original array
               .sort((a, b) => Number(b.timestamp - a.timestamp)) // sort proposals, showing most recent ones first
