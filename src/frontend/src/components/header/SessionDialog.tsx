@@ -8,12 +8,12 @@ type SessionDialogProps = {
   setIsOpen: (isOpen: boolean) => void;
 };
 
-function arrayBufferToHex(arrayBuffer: ArrayBuffer): string {
+/* function arrayBufferToHex(arrayBuffer: ArrayBuffer): string {
   const byteArray = new Uint8Array(arrayBuffer);
   return Array.from(byteArray, (byte) =>
     byte.toString(16).padStart(2, "0")
   ).join("");
-}
+} */
 
 export default function SessionDialog({
   isOpen,
@@ -26,17 +26,19 @@ export default function SessionDialog({
   return (
     <Dialog className="max-w-xl" isOpen={isOpen} setIsOpen={setIsOpen}>
       <HeadlessDialog.Title>Session</HeadlessDialog.Title>
+
       <div className="px-4 py-2 text-xs rounded-lg text-zinc-400 bg-zinc-900/50">
         <pre>
           {delegationChain?.delegations.map((delegation) => {
-            const pubKey = arrayBufferToHex(delegation.delegation.pubkey);
+            // const pubKey = arrayBufferToHex(delegation.delegation.pubkey);
             const expiration = new Date(
               Number(delegation.delegation.expiration / 1000000n)
             );
             return (
-              <div key={pubKey}>
+              /* <div key={pubKey}>
                 pubkey: {pubKey.slice(0, 8)}...{pubKey.slice(-8)}
-                <br />
+                <br /> */
+              <div>
                 expiration: {expiration.toLocaleDateString()}{" "}
                 {expiration.toLocaleTimeString()}
                 <br />
