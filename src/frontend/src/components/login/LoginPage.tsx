@@ -89,6 +89,9 @@ export default function LoginPage(): React.ReactElement {
           </div>
         </div>
       </div>
+      <div className="text-xl text-gray-400 mt-2">
+        Powered by <a href="https://internetcomputer.org/multichain" className="text-blue-500 hover:text-blue-700" target="_blank" rel="noopener noreferrer">Chain Fusion Technology</a>
+      </div>
     </div>
   );
 }
