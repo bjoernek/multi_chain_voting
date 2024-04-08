@@ -128,7 +128,7 @@ export default function Voting() {
             <label className="block mb-2 text-lg text-gray-400">Type:</label>
             <select value={type} onChange={(e) => setType(e.target.value)} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white">
               <option value="Motion">Motion</option>
-              <option value="TokenTransfer">Token Transfer</option>
+              {/* <option value="TokenTransfer">Token Transfer</option> */}
             </select>
           </div>
           <Button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg" disabled={isSubmitting}>
