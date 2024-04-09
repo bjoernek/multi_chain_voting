@@ -39,7 +39,7 @@ deploy-provider:
 upgrade-provider:
 	dfx canister install ic_siwe_provider --mode upgrade --upgrade-unchanged --argument "( \
 	    record { \
-	        domain = \"icp0.io\"; \
+	        domain = \"https://$$(dfx canister id --network "${NETWORK}" frontend).icp0.io\"; \
 	        uri = \"https://$$(dfx canister id --network "${NETWORK}" ic_siwe_provider).icp0.io\"; \
 	        salt = \"salt\"; \
 	        chain_id = opt 1; \
