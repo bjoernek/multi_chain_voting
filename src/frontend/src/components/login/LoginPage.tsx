@@ -51,7 +51,7 @@ export default function LoginPage(): React.ReactElement {
 
       <div className="flex items-center justify-center gap-5 md:gap-20">
         <img alt="ic" className="w-20 h-20 md:w-28 md:h-28" src="/ic.svg" />
-        <img alt="eth" className="w-20 h-20 md:w-32 md:h-32" src="/eth.svg" />
+        <img alt="eth" className="w-20 h-20 md:w-28 md:h-28" src="/eth.svg" />
       </div>
 
       <div className="px-10 text-xl font-bold text-center md:text-3xl">

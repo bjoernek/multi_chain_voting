@@ -115,7 +115,7 @@ export default function Voting() {
           </div>
         )}
 
-        <form onSubmit={handleProposalSubmit} className={`flex flex-col items-center w-full space-y-4 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
+        <form onSubmit={handleProposalSubmit} className={`flex flex-col items-center w-full space-y-4 ${isSubmitting ? 'bg-opacity-50 pointer-events-none' : ''}`}>
           <div className="w-full">
             <label className="block mb-2 text-lg text-gray-400">Title:</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white" />
