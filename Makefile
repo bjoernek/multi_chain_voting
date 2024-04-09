@@ -37,7 +37,7 @@ deploy-provider:
 	)"
 
 upgrade-provider:
-	dfx canister install ic_siwe_provider --mode upgrade --upgrade-unchanged --argument "( \
+	dfx canister install ic_siwe_provider --mode upgrade --network "${NETWORK}" --upgrade-unchanged --argument "( \
 	    record { \
 	        domain = \"https://$$(dfx canister id --network "${NETWORK}" frontend).icp0.io\"; \
 	        uri = \"https://$$(dfx canister id --network "${NETWORK}" ic_siwe_provider).icp0.io\"; \
@@ -55,11 +55,11 @@ upgrade-provider:
 	)"
 
 deploy-backend:
-	CANISTER_CANDID_PATH_EVM_RPC=../../src/evm_rpc.did dfx deploy backend --network "${NETWORK}" --argument "(\"${KEY}\")"
+	CANISTER_CANDID_PATH_EVM_RPC=../evm_rpc.did dfx deploy backend --network "${NETWORK}" --argument "(\"${KEY}\")"
 
 deploy-frontend:
 	npm install
-	CANISTER_CANDID_PATH_EVM_RPC=../../src/evm_rpc.did dfx deploy frontend --network "${NETWORK}"
+	CANISTER_CANDID_PATH_EVM_RPC=../src/evm_rpc.did dfx deploy frontend --network "${NETWORK}"
 
 deploy-all: create-canisters deploy-provider deploy-backend deploy-frontend
 
