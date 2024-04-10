@@ -22,4 +22,5 @@ getrandom = { version = "0.2", features = ["custom"] }
 k256 = "0.13"
 
 [build-dependencies]
+dotenv = "0.15.0"
 ic-cdk-bindgen = "0.1.3"
