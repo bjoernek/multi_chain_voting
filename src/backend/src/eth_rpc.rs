@@ -179,7 +179,7 @@ pub async fn eth_transaction(
     abi: &Contract,
     function_name: &str,
     args: &[Token],
-) -> String {
+) -> Result<String, String> {
     let f = match abi.functions_by_name(function_name).map(|v| &v[..]) {
         Ok([f]) => f,
         Ok(fs) => panic!(
@@ -230,8 +230,12 @@ pub async fn eth_transaction(
     match res {
         MultiSendRawTransactionResult::Consistent(SendRawTransactionResult::Ok(
             SendRawTransactionStatus::Ok(txid),
-        )) => format!("Ok: {txid:?}"),
-        other => format!("call: {signed_data}, error: {:?}", other),
+        )) => match txid {
+            Some(id) => Ok(id),
+            None => Err("Transaction ID was missing despite successful transaction status.".to_string()),
+        },
+        
+        other => Err(format!("call: {signed_data}, error: {:?}", other)),
     }
 }
 
@@ -428,7 +432,7 @@ pub async fn erc20_balance_of(user: &str, block_number: &str) -> Nat {
 }
 
 #[allow(unused)]
-pub async fn erc20_transfer_to(to: &str, amount: u128) -> String {
+pub async fn erc20_transfer_to(to: &str, amount: u128 ) -> Result<String, String> {
     eth_transaction(
         super::TARGET_CONTRACT.into(),
         &ETH_CONTRACT.with(Rc::clone),

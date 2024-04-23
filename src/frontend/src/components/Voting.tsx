@@ -20,7 +20,7 @@ function abbreviateNumber(value: number): string {
     // Handle cases where ethValue is less than 1 
     return ethValue.toFixed(2) + " ETH";
   }
-  
+
   // Calculate the short value to display
   const shortValue = (ethValue / Math.pow(1000, suffixIndex)).toFixed(2);
   return shortValue + suffixes[Math.min(suffixIndex, suffixes.length - 1)];
@@ -31,15 +31,19 @@ export default function Voting() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState('Motion');
+  const [duration_seconds, setDuration] = useState(60 * 60 * 24); // Default duration is 1 day
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [votingProposals, setVotingProposals] = useState<bigint[]>([]);
 
   useEffect(() => {
     if (actor) {
-      fetchProposals();
+      fetchProposals(); // Initial fetch
+      const interval = setInterval(fetchProposals, 60000); // Fetch proposals every 60 seconds
+
+      return () => clearInterval(interval); // Cleanup function to clear the interval when the component unmounts
     }
-  }, [actor]); 
+  }, [actor]);
 
 
 
@@ -51,7 +55,7 @@ export default function Voting() {
     }
     setIsSubmitting(true); // Start the spinner
     try {
-      const proposalId = await actor.submit_proposal(title, description, type);
+      const proposalId = await actor.submit_proposal(title, description, type, BigInt(duration_seconds));
       console.log(`Proposal submitted successfully with ID: ${proposalId}`);
 
       fetchProposals();
@@ -110,7 +114,7 @@ export default function Voting() {
 
         {/* Overlay Spinner */}
         {isSubmitting && (
-          <div className="absolute top-0 left-0 w-full h-full flex justify-center items-center bg-black bg-opacity-50 rounded-3xl">
+          <div className="absolute inset-0 bg-black bg-opacity-70 flex justify-center items-center z-10">
             <Spinner item="block height" />
           </div>
         )}
@@ -131,6 +135,14 @@ export default function Voting() {
               {/* <option value="TokenTransfer">Token Transfer</option> */}
             </select>
           </div>
+          <div className="w-full">
+            <label className="block mb-2 text-lg text-gray-400">Duration:</label>
+            <select value={duration_seconds} onChange={(e) => setDuration(Number(e.target.value))} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white">
+              <option value={86400}>1 Day</option>
+              <option value={60}>1 Minute</option>
+              <option value={120}>2 Minutes</option>
+            </select>
+          </div>
           <Button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg" disabled={isSubmitting}>
             Submit Proposal
           </Button>
@@ -138,30 +150,32 @@ export default function Voting() {
       </div>
 
 
-      {/* List of current proposals*/}
+      {/* List of open proposals*/}
       <div className="w-full max-w-7xl mx-auto border border-gray-600 bg-zinc-900 px-5 py-5 drop-shadow-2xl rounded-3xl flex flex-col items-center space-y-8">
         <div className="text-center text-3xl font-bold text-white">Vote on Open Proposals</div>
 
         {proposals.length > 0 ? (
           <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
             {proposals
+              .filter(proposal => proposal.is_open)
               .slice() // Create a shallow copy to avoid mutating the original array
-              .sort((a, b) => Number(b.timestamp - a.timestamp)) // sort proposals, showing most recent ones first
+              .sort((a, b) => Number(b.id - a.id)) // Sort proposals by ID
               .map((proposal, index) => (
                 <div key={index} className="border border-gray-600 rounded-lg p-6 bg-zinc-800 text-gray-400 hover:bg-zinc-700 transition duration-300 ease-in-out space-y-4 relative">
                   {votingProposals.includes(proposal.id) && (
                     // This spinner is absolutely positioned within the relative container above
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-10">
+                    <div className="absolute inset-0 bg-black bg-opacity-70 flex justify-center items-center z-10">
                       <Spinner item="voting power" />
                     </div>
                   )}
                   <h3 className="text-xl font-semibold text-white">{proposal.title}</h3>
-                  <div className="text-gray-300">
-                    <span className="font-semibold">Type:</span> <span className="ml-2">{proposal.proposal_type}</span>
-                  </div>
                   <div className="text-sm">
                     <span className="font-semibold text-gray-300">ID:</span> {proposal.id.toString()}
                   </div>
+                  <div className="text-gray-300">
+                    <span className="font-semibold">Type:</span> <span className="ml-2">{proposal.proposal_type}</span>
+                  </div>
+
                   <p className="text-gray-300"><span className="font-semibold">Description:</span> {proposal.description}</p>
 
                   {/* Submitter ICP principal and ETH address */}
@@ -169,8 +183,11 @@ export default function Voting() {
                   <PrincipalPill principal={proposal.submitter} className="bg-zinc-700" />
                   <AddressPill address={proposal.submitter_eth_address} className="bg-zinc-700" />
 
-                  <p><span className="font-semibold text-gray-300">Timestamp:</span> {new Date(Number(proposal.timestamp) / 1_000_000).toLocaleString()}</p>
+                  <p><span className="font-semibold text-gray-300">Creation time:</span> {new Date(Number(proposal.proposal_start_timestamp) / 1_000_000).toLocaleString()}</p>
+
+                  <p><span className="font-semibold text-gray-300">Expiration time:</span> {new Date(Number(proposal.proposal_end_timestamp) / 1_000_000).toLocaleString()}</p>
                   <p><span className="font-semibold text-gray-300">Blockheight:</span> {proposal.block_height.toString()}</p>
+
                   <div className="flex justify-between items-center text-sm text-gray-300">
                     <div className="flex gap-4">
                       <button
@@ -193,7 +210,7 @@ export default function Voting() {
                         Yes:
                         <span
                           className="ml-1 font-semibold"
-                          title={proposal.yes_votes.toString()}> 
+                          title={proposal.yes_votes.toString()}>
                           {abbreviateNumber(Number(proposal.yes_votes))}
                         </span>
                       </div>
@@ -201,7 +218,7 @@ export default function Voting() {
                         No:
                         <span
                           className="ml-1 font-semibold"
-                          title={proposal.no_votes.toString()}> 
+                          title={proposal.no_votes.toString()}>
                           {abbreviateNumber(Number(proposal.no_votes))}
                         </span>
                       </div>
@@ -219,6 +236,75 @@ export default function Voting() {
         <Button onClick={fetchProposals} className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
           Refresh Proposals
         </Button>
+      </div>
+
+      {/* List of closed proposals*/}
+      <div className="w-full max-w-7xl mx-auto border border-gray-600 bg-zinc-900 px-5 py-5 drop-shadow-2xl rounded-3xl flex flex-col items-center space-y-8">
+        <div className="text-center text-3xl font-bold text-white">Closed Proposals</div>
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+          {proposals
+            .filter(proposal => !proposal.is_open)
+            .slice() // Create a shallow copy to avoid mutating the original array
+            .sort((a, b) => Number(b.id - a.id)) // Sort proposals by ID
+            .map((proposal, index) => (
+              <div key={index} className="border border-gray-600 rounded-lg p-6 bg-zinc-800 text-gray-400 hover:bg-zinc-700 transition duration-300 ease-in-out space-y-4 relative">
+
+                <h3 className="text-xl font-semibold text-white">{proposal.title}</h3>
+                <div className="text-sm">
+                  <span className="font-semibold text-gray-300">ID:</span> {proposal.id.toString()}
+                </div>
+                <div className="text-gray-300">
+                  <span className="font-semibold">Type:</span> <span className="ml-2">{proposal.proposal_type}</span>
+                </div>
+
+                <p className="text-gray-300"><span className="font-semibold">Description:</span> {proposal.description}</p>
+
+                {/* Submitter ICP principal and ETH address */}
+                <div className="text-gray-300 font-semibold">Submitter Details:</div>
+                <PrincipalPill principal={proposal.submitter} className="bg-zinc-700" />
+                <AddressPill address={proposal.submitter_eth_address} className="bg-zinc-700" />
+
+                <p><span className="font-semibold text-gray-300">Creation time:</span> {new Date(Number(proposal.proposal_start_timestamp) / 1_000_000).toLocaleString()}</p>
+
+                <p><span className="font-semibold text-gray-300">Expiration time:</span> {new Date(Number(proposal.proposal_end_timestamp) / 1_000_000).toLocaleString()}</p>
+                <p><span className="font-semibold text-gray-300">Blockheight:</span> {proposal.block_height.toString()}</p>
+                <p>
+                  <span className="font-semibold text-gray-300">ETH Execution hash: </span>
+                  {proposal.eth_transaction_hash && proposal.eth_transaction_hash[0] ? (
+                    <a href={`https://sepolia.etherscan.io/tx/${proposal.eth_transaction_hash[0]}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-700">
+                      {`${proposal.eth_transaction_hash[0].slice(0, 6)}...${proposal.eth_transaction_hash[0].slice(-4)}`}
+                    </a>
+                  ) : ""}
+                </p>
+
+                <div className="flex justify-between items-center text-sm text-gray-300">
+
+                  <div className="flex items-center mb-2">
+                    Yes:
+                    <span
+                      className="ml-1 font-semibold"
+                      title={proposal.yes_votes.toString()}>
+                      {abbreviateNumber(Number(proposal.yes_votes))}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    No:
+                    <span
+                      className="ml-1 font-semibold"
+                      title={proposal.no_votes.toString()}>
+                      {abbreviateNumber(Number(proposal.no_votes))}
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+            ))}
+
+        </div>
+
       </div>
 
     </div >

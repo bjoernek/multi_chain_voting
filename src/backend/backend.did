@@ -4,12 +4,15 @@ type Proposal = record {
   submitter_eth_address : text;
   submitter : text;
   yes_votes : nat;
-  accepting_votes : bool;
+  is_open : bool;
+  is_executed: bool;
   description : text;
-  timestamp : nat64;
+  proposal_start_timestamp : nat64;
+  proposal_end_timestamp : nat64;  
   no_votes : nat;
   block_height : text;
   proposal_type : text;
+  eth_transaction_hash : opt text;
 };
 type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok : UserProfile; Err : text };
@@ -24,6 +27,8 @@ service : (text) -> {
   get_proposals : () -> (vec Proposal) query;
   list_profiles : () -> (Result_2) query;
   save_my_profile : (text, text) -> (Result_1);
-  submit_proposal : (text, text, text) -> (nat64);
+  submit_proposal : (text, text, text, nat64) -> (nat64);
   vote_on_proposal : (nat64, bool) -> (Result_3);
+  clear_closed_proposals: () -> (Result);
 }
+

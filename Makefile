@@ -59,7 +59,7 @@ deploy-backend:
 
 deploy-frontend:
 	npm install
-	CANISTER_CANDID_PATH_EVM_RPC=../src/evm_rpc.did dfx deploy frontend --network "${NETWORK}"
+	CANISTER_CANDID_PATH_EVM_RPC=../evm_rpc.did dfx deploy frontend --network "${NETWORK}"
 
 deploy-all: create-canisters deploy-provider deploy-backend deploy-frontend
 
