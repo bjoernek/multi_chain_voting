@@ -17,6 +17,7 @@ use user_profile::UserProfile;
 use ic_cdk::api::{caller, time};
 use ic_cdk::{init, post_upgrade, println, query, update};
 use std::collections::HashMap;
+use std::time::Duration;
 
 pub const TARGET_CONTRACT: &str = "0x2036081922cf3124E9f13b3a3a4bE55410C80D95";
 // Load relevant ABIs (Ethereum equivalent of Candid interfaces)
@@ -41,6 +42,9 @@ thread_local! {
     static ECDSA_KEY: RefCell<String> = RefCell::new(String::default());
 }
 
+// Duration for periodic checks of proposals
+const TIMER_INTERVAL: Duration = Duration::from_secs(60);
+
 #[derive(CandidType, Deserialize, Clone, Debug)]
 struct Proposal {
     id: u64,
@@ -49,19 +53,35 @@ struct Proposal {
     proposal_type: String,
     submitter: String,
     submitter_eth_address: String,
-    timestamp: u64,
-    accepting_votes: bool,
+    proposal_start_timestamp: u64,
+    proposal_end_timestamp: u64,
+    is_open: bool,
+    is_executed: bool,
     yes_votes: Nat,
     no_votes: Nat,
     block_height: String,
+    eth_transaction_hash: Option<String>,
 }
 
 #[update]
-async fn submit_proposal(title: String, description: String, proposal_type: String) -> u64 {
+async fn submit_proposal(
+    title: String,
+    description: String,
+    proposal_type: String,
+    duration_seconds: u64,
+) -> u64 {
     let submitter = caller().to_text();
     // Initialize submitter_eth_address as an empty string or an appropriate default value
     let mut submitter_eth_address: String = "".to_string();
-    let timestamp = time();
+
+    let proposal_start_timestamp = time();
+    let duration_in_nanoseconds = duration_seconds * 1_000_000_000;
+    let proposal_end_timestamp = proposal_start_timestamp + duration_in_nanoseconds;
+    println!("Proposal start timestamp: {}", proposal_start_timestamp);
+    println!(
+        "Computed proposal end timestamp: {}",
+        proposal_end_timestamp
+    );
 
     // Attempt to get the address asynchronously
     match service::save_my_profile::get_address().await {
@@ -86,11 +106,14 @@ async fn submit_proposal(title: String, description: String, proposal_type: Stri
             proposal_type,
             submitter,
             submitter_eth_address, // This will be empty or contain the address from get_address()
-            timestamp,
-            accepting_votes: true,
+            proposal_start_timestamp,
+            proposal_end_timestamp,
+            is_open: true,
+            is_executed: false,
             yes_votes: 0_usize.into(), // No votes yet
             no_votes: 0_usize.into(),  // No votes yet
             block_height,
+            eth_transaction_hash: None,
         };
 
         proposals.push(proposal);
@@ -111,17 +134,22 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         vote, voter_principal, proposal_id
     );
 
-    // Attempt to find the proposal
-    let block_number = PROPOSALS.with(|proposals| {
-        proposals
-            .borrow()
-            .iter()
-            .find(|&p| p.id == proposal_id)
-            .map_or_else(
-                || Err("Proposal not found".to_string()),
-                |proposal| Ok(proposal.block_height.clone()),
-            )
+    // Attempt to find the proposal and check its status
+    let proposal_check = PROPOSALS.with(|proposals| {
+        let proposals = proposals.borrow();
+        proposals.iter().find(|&p| p.id == proposal_id).map_or_else(
+            || Err("Proposal not found".to_string()),
+            |proposal| {
+                // Check is_open flag and the time stamp, as the periodic check for proposal status might be outstanding
+                if !proposal.is_open || proposal.proposal_end_timestamp < time() {
+                    Err("Proposal is already closed".to_string())
+                } else {
+                    Ok((proposal.block_height.clone(), proposal.is_open))
+                }
+            },
+        )
     })?;
+    let block_number = proposal_check.0;
 
     let voter = match service::save_my_profile::get_address().await {
         Ok(address) => address,
@@ -130,9 +158,7 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
         }
     };
 
-    let voting_power = eth_balance_of(&voter, &block_number).await;
-
-    // Then, record the vote, ensuring each principal votes only once per proposal.
+    // Ensure each principal votes only once per proposal.
     let already_voted = VOTES.with(|votes| {
         let mut votes = votes.borrow_mut();
         let proposal_votes = votes.entry(proposal_id).or_insert_with(HashMap::new);
@@ -157,6 +183,8 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
     if already_voted {
         return Err("You have already voted on this proposal".to_string());
     }
+
+    let voting_power = eth_balance_of(&voter, &block_number).await;
 
     // Update the proposal's vote tally
     PROPOSALS.with(|proposals| {
@@ -183,32 +211,53 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
 
 #[update]
 async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
-    let summary = PROPOSALS.with(|proposals| {
+    let eth_tx_summary = PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
-        let Some(proposal) = proposals.iter_mut().find(|p| p.id == proposal_id) else {
-            return Err(format!("Proposal {proposal_id} not found."));
-        };
-        if !proposal.accepting_votes {
+        let proposal = proposals.iter_mut().find(|p| p.id == proposal_id)
+            .ok_or_else(|| format!("Proposal {proposal_id} not found."))?;
+        if proposal.is_executed {
             return Err(format!("Proposal {proposal_id} already executed"));
         }
-        proposal.accepting_votes = false;
-        let summary = format!(
+        proposal.is_executed = true;
+
+        let total_votes = proposal.yes_votes.clone() + proposal.no_votes.clone();
+        let zero = candid::Nat::from(0u64);
+
+        let yes_percentage = if total_votes > zero {
+            let hundred = candid::Nat::from(100u64);
+            ((proposal.yes_votes.clone() * hundred) / total_votes).to_string()
+        } else {
+            "0".to_string() // If no votes have been cast, set the percentage to 0%
+        };
+
+        let eth_tx_summary = format!(
             "{}: Proposal {}: {}% yes",
             ic_cdk::id(),
             proposal.id,
-            ((proposal.yes_votes.clone() * 100_u128)
-                / (proposal.yes_votes.clone() + proposal.no_votes.clone()))
+            yes_percentage
         );
-        Ok(summary)
+        println!("Summary for proposal {}: {}", proposal_id, eth_tx_summary);
+        Ok(eth_tx_summary)
     })?;
 
-    Ok(eth_transaction(
+    // Perform the Ethereum transaction and capture the transaction hash
+    let transaction_result = eth_transaction(
         TARGET_CONTRACT.into(),
         &ETH_CONTRACT.with(Rc::clone),
         "storeString",
-        &[Token::String(summary)],
-    )
-    .await)
+        &[Token::String(eth_tx_summary.clone())],
+    ).await?;
+    
+
+    // Update the proposal with the Ethereum transaction hash if the transaction was successful
+    PROPOSALS.with(|proposals| {
+        let mut proposals = proposals.borrow_mut();
+        if let Some(proposal) = proposals.iter_mut().find(|p| p.id == proposal_id) {
+            proposal.eth_transaction_hash = Some(transaction_result.clone());
+        }
+    });
+
+    Ok(transaction_result)
 }
 
 #[update]
@@ -228,6 +277,11 @@ fn init(key_id: String) {
     ECDSA_KEY.with(|key| {
         *key.borrow_mut() = key_id;
     });
+
+    // Set up the timer to periodically check and execute proposals
+    ic_cdk_timers::set_timer_interval(TIMER_INTERVAL, || {
+        ic_cdk::spawn(check_and_execute_proposals());
+    });
 }
 
 #[post_upgrade]
@@ -235,6 +289,52 @@ fn post_upgrade(key_id: String) {
     ECDSA_KEY.with(|key| {
         *key.borrow_mut() = key_id;
     });
+
+    // Re-setup the timer to continue periodic checks after an upgrade
+    ic_cdk_timers::set_timer_interval(TIMER_INTERVAL, || {
+        ic_cdk::spawn(check_and_execute_proposals());
+    });
+}
+
+// Function to check and execute proposals if their end time has passed
+async fn check_and_execute_proposals() {
+    let mut ids_to_execute = Vec::new();
+
+    // Collect proposal IDs synchronously
+    PROPOSALS.with(|proposals_ref| {
+        let mut proposals = proposals_ref.borrow_mut();
+        for proposal in proposals.iter_mut() {
+            if proposal.is_open && proposal.proposal_end_timestamp < time() {
+                println!("Proposal with ID {} is now closed for voting", proposal.id);
+                proposal.is_open = false;
+                ids_to_execute.push(proposal.id);
+            }
+        }
+    });
+
+    // Execute each proposal asynchronously
+    for id in ids_to_execute {
+        println!("Attempting to execute proposal with ID {}", id);
+        match execute_proposal(id).await {
+            Ok(summary) => println!("Executed proposal {}: {}", id, summary),
+            Err(e) => println!("Error executing proposal {}: {}", e, id),
+        }
+    }
+}
+
+// Clean up function for demonstration purposes to clear old proposals 
+#[update]
+fn clear_closed_proposals() -> Result<usize, String> {
+    let removed_count = PROPOSALS.with(|proposals| {
+        let mut proposals = proposals.borrow_mut();
+        let initial_len = proposals.len();
+        proposals.retain(|p| {
+            p.is_open 
+        });
+        initial_len - proposals.len()
+    });
+
+    Ok(removed_count)
 }
 
 export_candid!();
