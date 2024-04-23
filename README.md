@@ -5,9 +5,9 @@
 Decentralized voting is a key element of blockchain governance, yet participation in this process on Ethereum is significantly hindered by high gas fees. Alternative solutions like Snapshot have emerged, offering an off-chain voting mechanism to sidestep these fees. However, such solutions introduce considerable challenges, particularly the lack of direct enforceability of votes on the blockchain. This discrepancy can lead to misalignments between governance decisions made off-chain and their actual implementation on-chain.
 
 ## Scope
-This project implements an ERC-20 based, 100% on-chain voting system enabled by leveraging Ethereum and the Internet Computer blockchain. Its key features include:
+This project implements an Ethereum token based, 100% on-chain voting system enabled by leveraging Ethereum and the Internet Computer blockchain. Its key features include:
 
-* Retrieving ERC-20 voting rights from Ethereum, and integrating them into the multi-chain governance framework.
+* Retrieving voting rights from Ethereum (Ethereum Sepolia or ERC-20 based), and integrating them into the multi-chain governance framework.
 * Implementing a simple, yet effective, voting application on the Internet Computer, covering frontend and backend.
 * Executing the voting process on the ICP blockchain, showcasing the practicability of on-chain voting.
 * Triggering actions on Ethereum based on voting outcomes, illustrating a seamless, admin-free integration that ensures that governance decisions are directly reflected on the blockchain.
