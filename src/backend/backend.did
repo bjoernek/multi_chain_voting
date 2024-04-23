@@ -18,6 +18,7 @@ type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok : UserProfile; Err : text };
 type Result_2 = variant { Ok : vec record { text; UserProfile }; Err : text };
 type Result_3 = variant { Ok; Err : text };
+type Result_4 = variant { Ok: nat64; Err: text };
 type UserProfile = record { avatar_url : text; name : text; address : text };
 service : (text) -> {
   execute_proposal : (nat64) -> (Result);
@@ -29,6 +30,6 @@ service : (text) -> {
   save_my_profile : (text, text) -> (Result_1);
   submit_proposal : (text, text, text, nat64) -> (nat64);
   vote_on_proposal : (nat64, bool) -> (Result_3);
-  clear_closed_proposals: () -> (nat64);
+  clear_closed_proposals: () -> (Result_4);
 }
 
