@@ -29,6 +29,6 @@ service : (text) -> {
   save_my_profile : (text, text) -> (Result_1);
   submit_proposal : (text, text, text, nat64) -> (nat64);
   vote_on_proposal : (nat64, bool) -> (Result_3);
-  clear_closed_proposals: () -> (Result);
+  clear_closed_proposals: () -> (nat64);
 }
 
