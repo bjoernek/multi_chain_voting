@@ -31,5 +31,6 @@ service : (text) -> {
   submit_proposal : (text, text, text, nat64) -> (nat64);
   vote_on_proposal : (nat64, bool) -> (Result_3);
   clear_closed_proposals: () -> (Result_4);
+  clear_proposal_by_id: (nat64) -> (Result);
 }
 

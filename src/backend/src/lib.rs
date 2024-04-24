@@ -337,4 +337,22 @@ fn clear_closed_proposals() -> Result<usize, String> {
     Ok(removed_count)
 }
 
+// Clean up function for demonstration purposes to clear a specific proposal by ID
+#[update]
+fn clear_proposal_by_id(proposal_id: u64) -> Result<String, String> {
+    let was_removed = PROPOSALS.with(|proposals| {
+        let mut proposals = proposals.borrow_mut();
+        let initial_len = proposals.len();
+        proposals.retain(|p| p.id != proposal_id);
+        initial_len > proposals.len() // Returns true if any proposals were removed
+    });
+
+    if was_removed {
+        Ok(format!("Proposal {} has been successfully cleared.", proposal_id))
+    } else {
+        Err(format!("No proposal found with ID {} or it was not cleared.", proposal_id))
+    }
+}
+
+
 export_candid!();
