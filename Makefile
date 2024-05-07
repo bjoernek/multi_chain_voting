@@ -59,6 +59,7 @@ deploy-backend:
 
 deploy-frontend:
 	npm install
+	dfx build --check  # work around issue with missing did files
 	CANISTER_CANDID_PATH_EVM_RPC=../evm_rpc.did dfx deploy frontend --network "${NETWORK}"
 
 deploy-all: create-canisters deploy-provider deploy-backend deploy-frontend
