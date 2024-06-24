@@ -5,6 +5,8 @@ import { Proposal } from '../../../declarations/backend/backend.did';
 import AddressPill from "./AddressPill";
 import PrincipalPill from "./PrincipalPill";
 import Spinner from './Spinner';
+import UpgradeEthFE from './UpgradeEthFE';
+import ConvertHex from 'convert-hex';
 
 // Note: This only applies to ETH. For ERC20 tokens the number of decimals is configurable. 
 function abbreviateNumber(value: number): string {
@@ -26,11 +28,30 @@ function abbreviateNumber(value: number): string {
   return shortValue + suffixes[Math.min(suffixIndex, suffixes.length - 1)];
 }
 
+function evidenceBinToHex(evidence: any) {
+  let evidence_hex = "";
+  if (evidence.length > 0) {
+    evidence_hex = ConvertHex.bytesToHex(Array.from(evidence[0]));
+    console.log(evidence_hex);
+  }
+  console.log(evidence_hex);
+  let evidence_hex_display = "";
+  if (evidence_hex.length > 40) {
+    // evidence_hex_short = evidence_hex.substring(0, 8) + "..." + evidence_hex.substring(evidence_hex.length-8, evidence_hex.length); // shorting with ...-notation, but this is less suitable for verifying a hash than showing the full hash
+    evidence_hex_display = evidence_hex.substring(0, 32) + " " + evidence_hex.substring(32, evidence_hex.length);
+  } else {
+    evidence_hex_display = evidence_hex;
+  }
+  return evidence_hex_display;
+}
+
 export default function Voting() {
   const { actor } = useActor();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState('Motion');
+  const [batchId, setBatchId] = useState('');
+  const [evidence, setEvidence] = useState('');
   const [duration_seconds, setDuration] = useState(60 * 60 * 24); // Default duration is 1 day
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,7 +76,14 @@ export default function Voting() {
     }
     setIsSubmitting(true); // Start the spinner
     try {
-      const proposalId = await actor.submit_proposal(title, description, type, BigInt(duration_seconds));
+      // field for proposal type "UpgradeEthFE"
+      let batchIdInt: bigint = BigInt(batchId);
+
+      console.log("title: " + title);
+      console.log("batchid: " + batchId + " " + (batchId === null) + " " + (batchId === undefined) + " " + (batchId === ""));
+      console.log("evidence:" + evidence + " " + (evidence === null) + " " + (evidence === undefined) + " " + (evidence === ""));
+
+      const proposalId = await actor.submit_proposal(title, description, type, type === 'UpgradeEthFE' ? [batchIdInt] : [] , type === 'UpgradeEthFE' ? [evidence] : [], BigInt(duration_seconds));
       console.log(`Proposal submitted successfully with ID: ${proposalId}`);
 
       fetchProposals();
@@ -66,6 +94,8 @@ export default function Voting() {
     setTitle('');
     setDescription('');
     setType('Motion');
+    setBatchId('');
+    setEvidence('');
   };
 
   const fetchProposals = async () => {
@@ -133,7 +163,14 @@ export default function Voting() {
             <select value={type} onChange={(e) => setType(e.target.value)} className="w-full p-3 rounded-lg border border-gray-600 bg-zinc-700 text-white">
               <option value="Motion">Motion</option>
               {/* <option value="TokenTransfer">Token Transfer</option> */}
+              <option value="UpgradeEthFE">Upgrade Ethereum Frontend</option>
             </select>
+          </div>
+          <div className="w-full">
+            {
+              (type === 'UpgradeEthFE') && <UpgradeEthFE batchId={ batchId } setBatchId={ setBatchId } evidence={ evidence } setEvidence={ setEvidence } ></UpgradeEthFE>
+            }
+          
           </div>
           <div className="w-full">
             <label className="block mb-2 text-lg text-gray-400">Duration:</label>
@@ -177,6 +214,10 @@ export default function Voting() {
                   </div>
 
                   <p className="text-gray-300"><span className="font-semibold">Description:</span> {proposal.description}</p>
+
+                  <p className="text-gray-300"><span className="font-semibold">Batch Id:</span> {proposal.batch_id.toString()}</p>
+
+                  <p className="text-gray-300"><span className="font-semibold">Evidence:</span> { evidenceBinToHex(proposal.evidence) } </p>
 
                   {/* Submitter ICP principal and ETH address */}
                   <div className="text-gray-300 font-semibold">Submitter Details:</div>
@@ -258,6 +299,10 @@ export default function Voting() {
                 </div>
 
                 <p className="text-gray-300"><span className="font-semibold">Description:</span> {proposal.description}</p>
+
+                <p className="text-gray-300"><span className="font-semibold">Batch Id:</span> {proposal.batch_id.toString()}</p>
+
+                <p className="text-gray-300"><span className="font-semibold">Evidence:</span> { evidenceBinToHex(proposal.evidence) } </p>
 
                 {/* Submitter ICP principal and ETH address */}
                 <div className="text-gray-300 font-semibold">Submitter Details:</div>
