@@ -1,18 +1,20 @@
 type Proposal = record {
   id : nat64;
+  is_open : bool;
   title : text;
+  proposal_end_timestamp : nat64;
   submitter_eth_address : text;
   submitter : text;
   yes_votes : nat;
-  is_open : bool;
-  is_executed: bool;
+  is_executed : bool;
+  batch_id : opt nat64;
   description : text;
-  proposal_start_timestamp : nat64;
-  proposal_end_timestamp : nat64;  
+  evidence : opt blob;
   no_votes : nat;
+  proposal_start_timestamp : nat64;
   block_height : text;
-  proposal_type : text;
   eth_transaction_hash : opt text;
+  proposal_type : text;
 };
 type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok : UserProfile; Err : text };
@@ -27,7 +29,6 @@ service : (text) -> {
   get_proposals : () -> (vec Proposal) query;
   list_profiles : () -> (Result_2) query;
   save_my_profile : (text, text) -> (Result_1);
-  submit_proposal : (text, text, text, nat64) -> (nat64);
+  submit_proposal : (text, text, text, opt nat64, opt text, nat64) -> (nat64);
   vote_on_proposal : (nat64, bool) -> (Result_3);
 }
-

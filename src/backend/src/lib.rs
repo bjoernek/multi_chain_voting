@@ -5,13 +5,15 @@ mod user_profile;
 
 use crate::eth_rpc::eth_balance_of;
 use candid::{CandidType, Deserialize, Nat};
-use eth_rpc::{eth_transaction, get_self_eth_address, latest_block_number};
+use eth_rpc::{eth_transaction, get_self_eth_address, latest_block_number, rpc_request_with_cycles};
 use ethers_core::abi::{Contract, Token};
 use ic_cdk_macros::export_candid;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
+use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::str::FromStr;
 use user_profile::UserProfile;
 
 use ic_cdk::api::{caller, time};
@@ -19,11 +21,31 @@ use ic_cdk::{init, post_upgrade, println, query, update};
 use std::collections::HashMap;
 use std::time::Duration;
 
+use ic_cdk::api::{
+    call::{call_with_payment, CallResult},
+    management_canister::ecdsa::{
+        ecdsa_public_key, sign_with_ecdsa, EcdsaKeyId, EcdsaPublicKeyArgument,
+        SignWithEcdsaArgument,
+    },
+};
+
+use crate::declarations::evm_rpc::*;
+use crate::declarations::ethereum_frontend::*;
+
+use candid::Principal;
+use hex::decode;
+
+pub const PROPOSAL_TYPE_MOTION: &str = "Motion";
+pub const PROPOSAL_TYPE_UPGRADE_ETH_FE: &str = "UpgradeEthFE";
+
 pub const TARGET_CONTRACT: &str = "0x2036081922cf3124E9f13b3a3a4bE55410C80D95";
 // Load relevant ABIs (Ethereum equivalent of Candid interfaces)
 thread_local! {
     pub static ETH_CONTRACT: Rc<Contract> = Rc::new(include_abi!("../../../solidity/contract.json"));
 }
+
+pub const TARGET_FRONTEND_CANISTER: &str = "tx7eh-tiaaa-aaaal-ajmea-cai"; // prod
+//pub const TARGET_FRONTEND_CANISTER: &str = "by6od-j4aaa-aaaaa-qaadq-cai"; // local
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 
@@ -51,6 +73,8 @@ struct Proposal {
     title: String,
     description: String,
     proposal_type: String,
+    batch_id: Option<u64>,
+    evidence: Option<Vec<u8>>,
     submitter: String,
     submitter_eth_address: String,
     proposal_start_timestamp: u64,
@@ -68,6 +92,8 @@ async fn submit_proposal(
     title: String,
     description: String,
     proposal_type: String,
+    batch_id: Option<u64>,
+    evidence: Option<String>,
     duration_seconds: u64,
 ) -> u64 {
     let submitter = caller().to_text();
@@ -95,6 +121,32 @@ async fn submit_proposal(
         }
     }
 
+    // handle Ethereum FE upgrade fields
+    println!("batch_id = {:?}, evidence = {:?}", batch_id, evidence);
+
+    let evidence_bytes = match evidence {
+        Some(val) => {
+            match decode(val) {
+                Ok(r) => Some(r),
+                Err(e) => { println!("Error with evidence: Decoding of evidence string failed. Be sure you have not copied the trailing \".\" from the command line with the evidence when updating the frontend canister. {}", e); panic!("Error with evidence: Decoding of evidence string failed. Be sure you have not copied the trailing \".\" from the command line with the evidence when updating the frontend canister."); },
+            }
+        },
+        None => None,
+    };
+        
+    // consistency check for attributes of the proposal, depending on proposal type
+    if proposal_type == PROPOSAL_TYPE_MOTION {
+        if batch_id != None || evidence_bytes != None {
+            panic!("Error: batch_id or evidence is defined, proposal submission failed. Please try again with correctly provided information.");
+        }
+    } else if proposal_type == PROPOSAL_TYPE_UPGRADE_ETH_FE {
+        if batch_id == None || evidence_bytes == None {
+            panic!("Error: batch_id or evidence is None, proposal submission failed. Please try again with correctly provided information.");
+        }
+    }
+    
+    //let evidence_bytes = Some(decode(evidence.unwrap()).unwrap());
+
     let (_, block_height) = latest_block_number().await;
     PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
@@ -104,6 +156,8 @@ async fn submit_proposal(
             title,
             description,
             proposal_type,
+            batch_id, // optional field for Upgrading Ethereum FE proposal
+            evidence: evidence_bytes, // optional field for Upgrading Ethereum FE proposal
             submitter,
             submitter_eth_address, // This will be empty or contain the address from get_address()
             proposal_start_timestamp,
@@ -211,6 +265,11 @@ async fn vote_on_proposal(proposal_id: u64, vote: bool) -> Result<(), String> {
 
 #[update]
 async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
+    
+    let mut proposal_type = None;
+    let mut batch_id = None;
+    let mut evidence = None;
+
     let eth_tx_summary = PROPOSALS.with(|proposals| {
         let mut proposals = proposals.borrow_mut();
         let proposal = proposals.iter_mut().find(|p| p.id == proposal_id)
@@ -218,7 +277,12 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
         if proposal.is_executed {
             return Err(format!("Proposal {proposal_id} already executed"));
         }
+
         proposal.is_executed = true;
+
+        proposal_type = Some(proposal.proposal_type.clone());
+        batch_id = proposal.batch_id.clone();
+        evidence = proposal.evidence.clone();
 
         let total_votes = proposal.yes_votes.clone() + proposal.no_votes.clone();
         let zero = candid::Nat::from(0u64);
@@ -240,6 +304,13 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
         Ok(eth_tx_summary)
     })?;
 
+    // if proposal is of type "UpgradeEthFE", upgrade the frontend canister
+    if proposal_type.unwrap() == PROPOSAL_TYPE_UPGRADE_ETH_FE {
+        // perform upgrade of frontend canister
+        // FIXME: For a production-grade implementation this needs to be improved, e.g., using retries to ensure the system remains consistent.
+        do_upgrade_eth_fe_canister(batch_id.unwrap(), evidence.unwrap()).await?;
+    }
+
     // Perform the Ethereum transaction and capture the transaction hash
     let transaction_result = eth_transaction(
         TARGET_CONTRACT.into(),
@@ -247,7 +318,6 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
         "storeString",
         &[Token::String(eth_tx_summary.clone())],
     ).await?;
-    
 
     // Update the proposal with the Ethereum transaction hash if the transaction was successful
     PROPOSALS.with(|proposals| {
@@ -258,6 +328,7 @@ async fn execute_proposal(proposal_id: u64) -> Result<String, String> {
     });
 
     Ok(transaction_result)
+    // Ok("Functions.".to_string())
 }
 
 #[update]
@@ -322,7 +393,36 @@ async fn check_and_execute_proposals() {
     }
 }
 
+fn ecdsa_key_id() -> EcdsaKeyId {
+    EcdsaKeyId {
+        curve: ic_cdk::api::management_canister::ecdsa::EcdsaCurve::Secp256k1,
+        name: ECDSA_KEY.with(|key| key.borrow().clone()),
+    }
+}
 
+// upgrades the ICP-hosted Ethereum dapp frontend by committing the uploaded assets
+// called as one of the steps when the proposal is executed
+async fn do_upgrade_eth_fe_canister(batch_id: u64, evidence: Vec<u8>) -> Result<String, String> {
+    let fe_canister_principal = Principal::from_text(TARGET_FRONTEND_CANISTER).unwrap();
 
+    let result = ic_cdk::call::<_, ()>(
+        fe_canister_principal,
+        "commit_proposed_batch",
+        (CommitProposedBatchArguments {
+            batch_id: candid::Nat::from(batch_id),
+            evidence: ByteBuf::from(evidence.clone()),
+        },),
+    )
+    .await;
+    //.expect("Failed to call commit on canister {} with batch_id {:?} and evidence {:?}.");
+ 
+    println!("Result = {:?}", result);
+    
+    match result {
+        Ok(r) => { println!("Commit call successful. Canister response = {:?}", r); Ok("Commit call successful.".to_string()) },
+        Err(e) => { println!("Error in commit call: {:?}. Failed to execute FE upgrade proposal with batch_id = \"{:?}\" and evidence = \"{:?}\".", e, batch_id, evidence); Err("Error in commit call.".to_string()) },
+    }
+
+}
 
 export_candid!();

@@ -26,5 +26,15 @@ fn main() {
     println!("cargo:rerun-if-env-changed=CANISTER_ID_EVM_RPC");
     println!("cargo:rerun-if-env-changed=CANISTER_CANDID_PATH_EVM_RPC");
 
+    // ethereum_frontend
+    let mut ethereum_frontend = Config::new("ethereum_frontend");
+    ethereum_frontend
+        .binding
+        .set_type_attributes("#[derive(Debug, CandidType, Deserialize)]".into());
+    builder.add(ethereum_frontend);
+    println!("cargo:rerun-if-env-changed=CANISTER_ID_ETHEREUM_FRONTEND");
+    println!("cargo:rerun-if-env-changed=CANISTER_CANDID_PATH_ETHEREUM_FRONTEND");
+
     builder.build(Some(manifest_dir.join("src/declarations")));
+
 }
