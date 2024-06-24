@@ -44,6 +44,9 @@ thread_local! {
     pub static ETH_CONTRACT: Rc<Contract> = Rc::new(include_abi!("../../../solidity/contract.json"));
 }
 
+pub const TARGET_FRONTEND_CANISTER: &str = "tx7eh-tiaaa-aaaal-ajmea-cai"; // prod
+//pub const TARGET_FRONTEND_CANISTER: &str = "by6od-j4aaa-aaaaa-qaadq-cai"; // local
+
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 thread_local! {
@@ -397,56 +400,10 @@ fn ecdsa_key_id() -> EcdsaKeyId {
     }
 }
 
-#[update]
-async fn request_commit_assets(batch_id: u64, evidence: String) {
-    println!("Committing frontend assets. Triggered by external call. {}, {}", batch_id, evidence);
-
-    let result = commit_assets(batch_id, evidence).await;
-    println!("Result = {:?}", result);
-}
-
-#[update]
-async fn delete() {
-    println!("Deleting frontend asset.");
-    
-    let result = ic_cdk::call::<_, ()>(
-        Principal::from_text("be2us-64aaa-aaaaa-qaabq-cai").unwrap(),
-        "delete_asset",
-        (DeleteAssetArguments {
-            key: Key::from_str("/assets/index-B3YNcDVy.js").unwrap(),
-        },),
-    )
-    .await
-    .expect("Failed to call delete_asset");
-
-    println!("Result = {:?}", result);
-}
-
-#[update]
-async fn commit_assets(batch_id: u64, evidence: String) {
-    
-    let id = batch_id;
-    
-    let evidence_bytes = decode(evidence).expect("Decoding of evidence string failed. Be sure you have not copied the trailing \".\" from the command line.");
-    
-    let result = ic_cdk::call::<_, ()>(
-        Principal::from_text("b77ix-eeaaa-aaaaa-qaada-cai").unwrap(),
-        //Principal::from_text("be2us-64aaa-aaaaa-qaabq-cai").unwrap(),
-        "commit_proposed_batch",
-        (CommitProposedBatchArguments {
-            batch_id: candid::Nat::from(id),
-            evidence: ByteBuf::from(evidence_bytes),
-        },),
-    )
-    .await
-    .expect("Failed to call commit");
-    
-    println!("Result = {:?}", result);
-    
-}
-
+// upgrades the ICP-hosted Ethereum dapp frontend by committing the uploaded assets
+// called as one of the steps when the proposal is executed
 async fn do_upgrade_eth_fe_canister(batch_id: u64, evidence: Vec<u8>) -> Result<String, String> {
-    let fe_canister_principal = Principal::from_text("by6od-j4aaa-aaaaa-qaadq-cai").unwrap();
+    let fe_canister_principal = Principal::from_text(TARGET_FRONTEND_CANISTER).unwrap();
 
     let result = ic_cdk::call::<_, ()>(
         fe_canister_principal,

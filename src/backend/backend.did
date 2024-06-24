@@ -33,8 +33,5 @@ service : (text) -> {
   request_commit_assets : (nat64, text) -> ();
   save_my_profile : (text, text) -> (Result_1);
   submit_proposal : (text, text, text, opt nat64, opt text, nat64) -> (nat64);
-  test : () -> ();
-  test1 : () -> () query;
-  test2 : () -> ();
   vote_on_proposal : (nat64, bool) -> (Result_3);
 }
