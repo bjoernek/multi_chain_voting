@@ -52,3 +52,28 @@ If you want you can also deploy to ICP mainnet.
 - If you don't have any cycles (gas) yet, run `dfx wallet --network ic redeem-faucet-coupon <code>`
 - `DFX_NETWORK=ic make deploy-all`. You will see a URL to the frontend in the console
 - The new backend canister will have a different ETH address. Send it some SepoliaETH if you want it to be able to write to Sepolia
+
+# Extension: Proposal type for upgrading an ICP-hosted Ethereum dapp frontend
+
+This demo extension implements upgrading an ICP-hosted Ethereum frontend with a vote of Ethereum users on ICP. This allows to have a DAO on ICP governed by Ethereum users, using the voting power based on token holdings on the Ethereum network, and upgrading an ICP-hosted Ethereum frontend.
+
+The example frontend is hosted as a separate project (??) and comprises a dummy UI for UniSwap that is hosted as an ICP canister. This canister allows for the `Prepare` and `Commit` operations. `Prepare` uploads a new frontend to the canister, while not making it accessible yet for users. `Commit` commits the uploaded changes from the `Prepare` to the canister and makes them available as the current version of the frontend.
+
+The demo proceeds as follows:
+* An entity with the `Prepare` permission uploads an updated frontend to the canister using the `dfx deploy asset_frontend --by-proposal --network ic` command.
+  * The GitHub repository for the demo frontend canister contains two branches with two visually very distinct user interfaces, but only a small change set to allow for fast uploading. You can use the following commands to check out the versions for the demo:
+    * `git checkout pre-upgrade-frontend` to checkout a boring-looking frontend to upload to the canister intially. This upload can be done using `dfx deploy asset_frontend` in the demo. Note that in a real-world deployment the uploader would not have commit rights, but for simplifying the demo they can have.
+    * `git checkout post-upgrade-frontend` to checkout the new frontend to upload to the canister with the `...--by-proposal` command. This command output `batch_id` and `evidence` values which are used as input to the voting process. Anyone can validate the correctness of the update by having the previous version and the version after the `Prepare` of the canister and the `batch_id` and `evidence` by re-running the `deploy` operation locally using `dfx deploy asset_frontend --by-proposal`.
+* The voting demo is used to create and vote on a proposal of type `Upgrade Ethereum Frontend` using the `batch_id` and `evidence` as the parameters to vote on.
+* Once the vote concludes successfully, the governance canister calls the `commit_proposed_batch` method of the asset canister hosting the frontend.
+
+## Extension runbook
+
+The steps explained in the runbook above apply to this extension part of the demo as well. However, additional steps are required in order to show the extension.
+
+* Deploy the Ethereum frontend on an asset canister on ICP as explained in (FIXME link).
+* Assign permissions to the frontend canister as follows:
+  * `Prepare` permission to the principal you use for uploading the updated UI. This is probably the principal you used to deploy the canister and is set automatically.
+  * `Commit` permission to the principal of the backend canister of the voting demo. This backend needs to have the rights to call the `commit_proposed_batch` method of the frontend canister.
+
+  
